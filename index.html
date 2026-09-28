@@ -129,6 +129,12 @@ audio{width:100%;margin-top:8px}
  <div id="loginSede">
   <h1>¿En qué sede estás?</h1>
   <div class="list" id="sedeList"></div>
+  <button class="big alt" id="btnSoyTec" style="margin-top:22px"><span class="e">🔧</span> Soy técnico o proveedor</button>
+ </div>
+ <div id="loginTec" class="hidden">
+  <h1>¿Quién eres?</h1>
+  <div class="list" id="tecList"></div>
+  <button class="lnk" id="volverSede2">← Volver</button>
  </div>
  <div id="loginPersona" class="hidden">
   <h1>¿Quién eres?</h1>
@@ -201,6 +207,32 @@ audio{width:100%;margin-top:8px}
  <p style="text-align:center"><button class="lnk" id="btnDescartar" style="color:var(--bad)">Cancelar esta revisión</button></p>
 </section>
 
+<!-- ÓRDENES DEL TÉCNICO -->
+<section class="screen" id="sOrd">
+ <div class="pill ok" id="pillT">✅ Todo enviado</div>
+ <button class="big alt" id="btnOrdAct">↻ Actualizar mis órdenes</button>
+ <div id="ordList"></div>
+</section>
+
+<!-- RESOLVER ORDEN -->
+<section class="screen" id="sRes">
+ <div class="head"><div class="ar" id="rTit"></div><div class="meta"><span id="rSub"></span></div></div>
+ <div class="final" id="rFotoBox" style="margin-top:0">
+  <div style="font-weight:800;font-size:1.1rem">📸 Foto del después</div>
+  <div class="muted">Toma la foto donde se vea el arreglo terminado.</div>
+  <button class="act blue" id="rFotoBtn">📷 Tomar foto del arreglo</button>
+  <img class="thumb hidden" id="rFotoImg" alt="Foto del después">
+ </div>
+ <div class="item">
+  <div style="font-weight:800">🗣️ ¿Qué hiciste? (opcional)</div>
+  <button class="act blue" id="rVoz">🎤 Contar qué hice</button>
+  <textarea id="rTxt" placeholder="Ej.: cambié la chapa y ajusté la bisagra"></textarea>
+  <label class="muted" style="display:block;margin-top:8px">Costo de materiales (opcional)<br><input id="rCosto" type="number" inputmode="numeric" min="0" step="1000" style="width:100%;border:2px solid var(--line);border-radius:10px;padding:10px;font:inherit;margin-top:4px" placeholder="$"></label>
+ </div>
+ <button class="big ok" id="rGuardar" style="min-height:72px"><span class="e">✅</span> Marcar como resuelta</button>
+ <p style="text-align:center"><button class="lnk" id="rCancel">← Volver a mis órdenes</button></p>
+</section>
+
 <!-- LISTO -->
 <section class="screen" id="sDone">
  <div class="okc"><div class="ck">✓</div><h1 id="doneT">¡Área revisada!</h1><p id="doneS" class="muted"></p></div>
@@ -216,7 +248,7 @@ audio{width:100%;margin-top:8px}
 <script>
 /* ============ CONFIGURACIÓN ============ */
 var API_URL = 'https://script.google.com/macros/s/AKfycbxFgV0FXkL9Y-UHpl6gROY9uJf1sLz6_ip3UC7oiM4tkm3zh147L3jqvM_832apbrHhPA/exec';
-var VERSION = '1.2';
+var VERSION = '2.0';
 var PROB_VERIF = 0.25;        // probabilidad de verificación al azar por área
 var FOTO_MAX_MIN = 3;         // minutos máximos de antigüedad de una foto
 var QR_PREFIX = 'IPS-INF:';
@@ -258,7 +290,7 @@ function kvDel(k){return tx('kv','readwrite',function(s){s.delete(k);});}
 function kvGet(k){return db().then(function(d){return new Promise(function(ok){var r=d.transaction('kv').objectStore('kv').get(k);r.onsuccess=function(){ok(r.result);};r.onerror=function(){ok(null);};});});}
 
 /* ============ ESTADO ============ */
-var CFG=null, USER=null, SEDE=null, DR=null, TIMER=null;
+var CFG=null, USER=null, SEDE=null, DR=null, TIMER=null, TEC=null, ORDS=[], ORD=null, RFOTO=null;
 function hist(){return lsGet('inf_hist_'+hoy())||[];}
 function setHist(h){lsSet('inf_hist_'+hoy(),h);}
 
@@ -275,7 +307,7 @@ function cargarConfig(){
 var LP={sede:null,persona:null,pin:''};
 function pantallaIngreso(){
  show('sLogin');
- ['loginSede','loginPersona','loginPin','loginNoCfg'].forEach(function(i){$(i).classList.add('hidden');});
+ ['loginSede','loginPersona','loginPin','loginNoCfg','loginTec'].forEach(function(i){$(i).classList.add('hidden');});LP.tec=false;$('btnSoyTec').classList.toggle('hidden',!(CFG&&CFG.tecnicos&&CFG.tecnicos.length));
  if(!CFG||!CFG.sedes||!CFG.sedes.length){$('loginNoCfg').classList.remove('hidden');return;}
  $('loginSede').classList.remove('hidden');
  $('sedeList').innerHTML=CFG.sedes.map(function(s){return '<button class="opt" data-s="'+esc(s.id)+'"><span class="av">🏥</span>'+esc(s.nombre)+'<span class="muted" style="margin-left:auto;font-weight:400">'+esc(s.ciudad)+'</span></button>';}).join('');
@@ -297,6 +329,7 @@ function pantallaPin(){
 function dibujaDots(){Array.prototype.forEach.call($('dots').children,function(d,i){d.classList.toggle('f',i<LP.pin.length);});}
 function validarPin(){
  sha256(LP.persona.id+'|'+LP.pin).then(function(h){
+  if(h===LP.persona.pin&&LP.tec){TEC={id:LP.persona.id,nombre:LP.persona.nombre,k:h};lsSet('inf_tec',TEC);vib(40);entrarTec();return;}
   if(h===LP.persona.pin){USER={id:LP.persona.id,nombre:LP.persona.nombre,sede:LP.sede};lsSet('inf_user',USER);vib(40);entrar();}
   else{vib([80,60,80]);$('dots').classList.add('shake');setTimeout(function(){$('dots').classList.remove('shake');LP.pin='';dibujaDots();},400);toast('Clave incorrecta',true);}
  }).catch(function(){toast('Este navegador no permite validar la clave. Abre la app desde el enlace oficial.',true);});
@@ -310,6 +343,7 @@ function entrar(){
  kvGet('borrador').then(function(d){if(d&&d.persona_id===USER.id&&fecha(d.ini)===hoy()){if(lsGet('inf_pend')){localStorage.removeItem('inf_pend');toast('Primero termina la revisión de '+d.area,true);}DR=d;abrirChecklist(true);}else{if(d)kvDel('borrador');home();}});
 }
 function pendiente(){
+ if(TEC)return false;
  var p=lsGet('inf_pend');if(!p)return false;localStorage.removeItem('inf_pend');
  if(Date.now()-p.ts>10*60000)return false;
  var a=CFG.areas.filter(function(x){return x.token===p.t;})[0];
@@ -467,9 +501,10 @@ function procesarFoto(f,lab){
   var w=img.width,h=img.height,sc=Math.min(1,1280/Math.max(w,h)),cw=Math.round(w*sc),ch=Math.round(h*sc);
   var c=document.createElement('canvas');c.width=cw;c.height=ch;var x=c.getContext('2d');x.drawImage(img,0,0,cw,ch);
   var t=Date.now(),d=new Date(t),fs=Math.max(15,Math.round(cw/40));
-  var L=['IPS Salud del Caribe | '+SEDE.nombre+' | '+DR.area+' (piso '+DR.piso+')',pad2(d.getDate())+'/'+pad2(d.getMonth()+1)+'/'+d.getFullYear()+' '+hora(t)+' | '+USER.nombre];
+  var cx=ORD&&!DR?{sede:ORD.sede,area:ORD.area,piso:ORD.piso,quien:TEC.nombre,gps:null}:{sede:SEDE.nombre,area:DR.area,piso:DR.piso,quien:USER.nombre,gps:DR.gps};
+  var L=['IPS Salud del Caribe | '+cx.sede+' | '+cx.area+' (piso '+cx.piso+')',pad2(d.getDate())+'/'+pad2(d.getMonth()+1)+'/'+d.getFullYear()+' '+hora(t)+' | '+cx.quien];
   if(lab)L.push(lab);
-  if(DR.gps)L.push('GPS '+DR.gps.lat+', '+DR.gps.lng+' (±'+DR.gps.acc+' m)');
+  if(cx.gps)L.push('GPS '+cx.gps.lat+', '+cx.gps.lng+' (±'+cx.gps.acc+' m)');
   var lh=fs*1.35,bh=lh*L.length+fs*.7;
   x.fillStyle='rgba(0,0,0,.62)';x.fillRect(0,ch-bh,cw,bh);x.fillStyle='#fff';x.font='600 '+fs+'px system-ui,sans-serif';
   L.forEach(function(l,i){x.fillText(l.length>70?l.slice(0,69)+'…':l,fs*.6,ch-bh+fs*1.15+i*lh);});
@@ -582,30 +617,100 @@ function sincronizar(){
   q.forEach(function(r){p=p.then(function(){r.enviado=Date.now();
    return fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(r)}).then(function(x){return x.json();}).then(function(j){
     if(!j.ok)throw new Error(j.error||'Error del servidor');
-    return qDel(r.id).then(function(){var h=lsGet('inf_hist_'+r.fecha)||[];h.forEach(function(e){if(e.id===r.id)e.enviado=true;});lsSet('inf_hist_'+r.fecha,h);});
+    return qDel(r.id).then(function(){if(!r.fecha)return;var h=lsGet('inf_hist_'+r.fecha)||[];h.forEach(function(e){if(e.id===r.id)e.enviado=true;});lsSet('inf_hist_'+r.fecha,h);});
    });});});
   return p;
- }).catch(function(e){console.warn('Envío pendiente',e);}).then(function(){SYNC=false;actualizarPill();if($('sHome').classList.contains('on'))home();else if($('sDone').classList.contains('on'))qAll().then(function(q){if(!q.length)$('doneS').textContent=$('doneS').textContent.replace('Enviando al supervisor…','Enviada al supervisor ✅');});});
+ }).catch(function(e){console.warn('Envío pendiente',e);}).then(function(){SYNC=false;actualizarPill();actualizarPillT();if($('sHome').classList.contains('on'))home();else if($('sDone').classList.contains('on'))qAll().then(function(q){if(!q.length)$('doneS').textContent=$('doneS').textContent.replace('Enviando al supervisor…','Enviada al supervisor ✅').replace('Enviando al supervisor para que la verifique…','Enviada al supervisor ✅');});});
 }
 window.addEventListener('online',function(){sincronizar();cargarConfig();});
 window.addEventListener('hashchange',function(){var m=location.hash.match(/[#&]q=([A-Z0-9]+)/);if(!m)return;localStorage.setItem('inf_pend',JSON.stringify({t:m[1],ts:Date.now()}));history.replaceState(null,'',location.pathname+location.search);if(USER&&CFG&&!DR){cerrarEscaner();home();}});
 window.addEventListener('offline',actualizarPill);
 setInterval(sincronizar,45000);
 
+
+/* ============ MODO TÉCNICO ============ */
+function pantallaTec(){
+ ['loginSede','loginPersona','loginPin','loginNoCfg'].forEach(function(i){$(i).classList.add('hidden');});
+ $('loginTec').classList.remove('hidden');
+ var L=(CFG.tecnicos||[]);
+ $('tecList').innerHTML=L.length?L.map(function(p){return '<button class="opt" data-t="'+esc(p.id)+'"><span class="av" style="background:var(--ok)">🔧</span>'+esc(p.nombre)+'<span class="muted" style="margin-left:auto;font-weight:400">'+esc(p.tipo)+'</span></button>';}).join(''):'<p>No hay técnicos registrados. Avísale al supervisor.</p>';
+ Array.prototype.forEach.call($('tecList').querySelectorAll('[data-t]'),function(b){b.onclick=function(){LP.persona=CFG.tecnicos.filter(function(p){return p.id===b.getAttribute('data-t');})[0];LP.tec=true;$('loginTec').classList.add('hidden');pantallaPin();};});
+}
+function entrarTec(){
+ $('topName').textContent=TEC.nombre;$('topSub').textContent='Técnico · Mis órdenes';show('sOrd');cargarOrdenes();
+}
+function cargarOrdenes(){
+ ORDS=lsGet('inf_ords')||[];pintarOrdenes();
+ if(!navigator.onLine){actualizarPillT();return;}
+ $('btnOrdAct').disabled=true;$('btnOrdAct').textContent='Cargando…';
+ fetch(API_URL+'?accion=ordenes&r='+encodeURIComponent(TEC.id)+'&k='+encodeURIComponent(TEC.k)).then(function(r){return r.json();}).then(function(j){
+  if(!j.ok)throw new Error(j.error);ORDS=j.ordenes;lsSet('inf_ords',ORDS);pintarOrdenes();
+ }).catch(function(e){toast('No se pudieron cargar: '+e.message,true);}).then(function(){$('btnOrdAct').disabled=false;$('btnOrdAct').textContent='↻ Actualizar mis órdenes';actualizarPillT();});
+}
+function diasA(s){if(!s)return null;var a=new Date(hoy()+'T00:00:00'),b=new Date(String(s).slice(0,10)+'T00:00:00');return Math.round((b-a)/864e5);}
+function pintarOrdenes(){
+ var hechas=lsGet('inf_res_'+hoy())||[];
+ var L=ORDS.filter(function(o){return hechas.indexOf(o.id)<0;}).sort(function(a,b){return (diasA(a.comp)===null?999:diasA(a.comp))-(diasA(b.comp)===null?999:diasA(b.comp));});
+ var PC={'Crítica':'var(--bad)','Alta':'#C0582F','Media':'var(--warn)','Baja':'var(--blue)'};
+ $('ordList').innerHTML=(L.length?'<h2>'+L.length+' '+(L.length>1?'órdenes':'orden')+' pendiente'+(L.length>1?'s':'')+'</h2>':'<div class="okc"><div class="ck">✓</div><h1>No tienes órdenes pendientes</h1></div>')+
+  L.map(function(o,i){var d=diasA(o.comp),pl=d===null?'':(d<0?'⏰ Vencida hace '+(-d)+' día'+(d<-1?'s':''):d===0?'⏰ Vence hoy':'Plazo: '+d+' día'+(d>1?'s':''));
+   return '<div class="item" style="border-color:'+(PC[o.pri]||'var(--line)')+'"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b style="color:'+(PC[o.pri]||'inherit')+'">'+esc(o.pri||'')+'</b><span class="muted" style="font-weight:700;color:'+(d!==null&&d<=0?'var(--bad)':'var(--dim)')+'">'+pl+'</span></div>'+
+    '<div style="font-size:1.15rem;font-weight:800;margin:6px 0 2px">'+icono(o.punto)+' '+esc(o.punto)+'</div><div class="muted">'+esc(o.sede)+', '+esc(o.area)+' (piso '+esc(o.piso)+')</div>'+
+    (o.desc?'<div class="trans">'+esc(o.desc)+'</div>':'')+(o.estado==='Devuelta'?'<div class="flag w" style="margin-top:8px">↩️ Devuelta por el supervisor'+(o.nota?': '+esc(o.nota):'')+'</div>':'')+
+    '<button class="act blue" data-foto="'+i+'">🖼️ Ver foto del daño</button><img class="thumb hidden" id="of'+i+'" alt="">'+
+    (o.estado!=='En ejecución'?'<button class="act blue" data-ini="'+i+'">▶️ Empecé el trabajo</button>':'<div class="flag i" style="margin-top:8px">🔨 En ejecución</div>')+
+    '<button class="big ok" data-fin="'+i+'" style="min-height:58px;font-size:1.1rem">✅ Terminé</button></div>';}).join('');
+ Array.prototype.forEach.call($('ordList').querySelectorAll('[data-foto]'),function(b){b.onclick=function(){var i=+b.getAttribute('data-foto'),o=L[i],im=$('of'+i);if(!o.foto){toast('Esta novedad no tiene foto');return;}
+  b.textContent='Cargando foto…';fetch(API_URL+'?accion=foto&id='+encodeURIComponent(o.foto)+'&r='+encodeURIComponent(TEC.id)+'&k='+encodeURIComponent(TEC.k)).then(function(r){return r.json();}).then(function(j){if(!j.ok)throw 0;im.src=j.foto;im.classList.remove('hidden');b.classList.add('hidden');}).catch(function(){b.textContent='🖼️ Ver foto del daño';toast('No se pudo cargar la foto',true);});};});
+ Array.prototype.forEach.call($('ordList').querySelectorAll('[data-ini]'),function(b){b.onclick=function(){var o=L[+b.getAttribute('data-ini')];o.estado='En ejecución';lsSet('inf_ords',ORDS);
+  qPut({tipo:'avance',id:'AV-'+o.id+'-'+Date.now(),nov:o.id,r:TEC.id,k:TEC.k,creado:Date.now()}).then(function(){pintarOrdenes();sincronizar();});};});
+ Array.prototype.forEach.call($('ordList').querySelectorAll('[data-fin]'),function(b){b.onclick=function(){abrirResolver(L[+b.getAttribute('data-fin')]);};});
+}
+function actualizarPillT(){qAll().then(function(q){var p=$('pillT');if(!p)return;if(!q.length){p.className='pill ok';p.textContent='✅ Todo enviado al supervisor';}else{p.className='pill wait';p.textContent=(navigator.onLine?'⬆️ Enviando ':'📴 Sin internet: ')+q.length+' pendiente'+(q.length>1?'s':'');}});}
+function abrirResolver(o){
+ ORD=o;DR=null;RFOTO=null;show('sRes');
+ $('rTit').textContent=o.punto;$('rSub').textContent=o.sede+', '+o.area+' (piso '+o.piso+')';
+ $('rTxt').value='';$('rCosto').value='';$('rFotoImg').classList.add('hidden');$('rFotoBtn').className='act blue';$('rFotoBtn').textContent='📷 Tomar foto del arreglo';$('rFotoBox').classList.remove('missing');
+}
+$('rFotoBtn').onclick=function(){tomarFoto(function(u){RFOTO=u;$('rFotoImg').src=u;$('rFotoImg').classList.remove('hidden');$('rFotoBtn').className='act blue done';$('rFotoBtn').textContent='✅ Foto lista (tocar para repetir)';$('rFotoBox').classList.remove('missing');},'Después: '+ORD.punto);};
+$('rCancel').onclick=function(){ORD=null;entrarTec();};
+$('rVoz').onclick=function(){
+ var SR=window.SpeechRecognition||window.webkitSpeechRecognition,b=$('rVoz'),ta=$('rTxt');
+ if(REC){REC.stop();return;}
+ if(!SR||!navigator.onLine){toast('Sin internet no se puede dictar. Escribe o sigue sin descripción.',true);return;}
+ var partes=ta.value?[ta.value]:[],ult='',activo=true,err=null,r=null,t0=Date.now();
+ function fin(){REC=null;b.className='act blue';b.textContent='🎤 Contar qué hice';ta.value=partes.join(' ').replace(/\s+/g,' ').trim();}
+ function go(){r=new SR();r.lang='es-CO';r.continuous=false;r.interimResults=true;ult='';err=null;
+  r.onresult=function(e){ult=String(e.results[e.results.length-1][0].transcript||'').trim();ta.value=partes.concat(ult?[ult]:[]).join(' ');};
+  r.onerror=function(e){err=e.error;};
+  r.onend=function(){if(ult){partes.push(ult);ult='';}if(activo&&(!err||err==='no-speech')&&Date.now()-t0<90000){try{go();return;}catch(x){}}fin();};r.start();}
+ REC={stop:function(){activo=false;try{r.stop();}catch(e){fin();}}};b.className='act rec';b.textContent='⏹️ Tocar para terminar';
+ try{go();}catch(e){fin();}
+};
+$('rGuardar').onclick=function(){
+ if(REC){REC.stop();return;}
+ if(!RFOTO){$('rFotoBox').classList.add('missing');toast('Falta la foto del arreglo terminado',true);vib([80,60,80]);return;}
+ var o=ORD,rec={tipo:'resolver',id:'RES-'+o.id,nov:o.id,r:TEC.id,k:TEC.k,creado:Date.now(),foto:RFOTO,texto:$('rTxt').value.trim(),costo:$('rCosto').value};
+ qPut(rec).then(function(){var h=lsGet('inf_res_'+hoy())||[];h.push(o.id);lsSet('inf_res_'+hoy(),h);ORDS=ORDS.filter(function(x){return x.id!==o.id;});lsSet('inf_ords',ORDS);
+  ORD=null;RFOTO=null;$('doneT').textContent='¡Orden resuelta!';$('doneS').textContent=navigator.onLine?'Enviando al supervisor para que la verifique…':'Sin internet: se envía sola cuando vuelva la señal.';
+  $('doneScan').classList.add('hidden');$('doneHome').textContent='Ver mis órdenes';show('sDone');vib([60,40,120]);sincronizar();});
+};
+
 /* ============ EVENTOS ============ */
-$('btnScan').onclick=abrirEscaner;$('doneScan').onclick=abrirEscaner;$('doneHome').onclick=home;
+$('btnScan').onclick=abrirEscaner;$('doneScan').onclick=abrirEscaner;$('doneHome').onclick=function(){if(TEC){$('doneScan').classList.remove('hidden');$('doneHome').textContent='Ver mi ronda';entrarTec();}else home();};
 $('scanCancel').onclick=function(){cerrarEscaner();home();};
 $('noQR').onclick=sinQR;$('noQRCancel').onclick=home;
-$('volverSede').onclick=pantallaIngreso;$('volverPersona').onclick=pantallaPersona;
-$('btnSalir').onclick=function(){if(DR&&!confirm('Tienes una revisión sin terminar. Si sales queda guardada para cuando vuelvas a entrar. ¿Salir?'))return;cerrarEscaner();USER=null;lsSet('inf_user',null);pantallaIngreso();};
+$('volverSede').onclick=pantallaIngreso;$('btnSoyTec').onclick=pantallaTec;$('volverSede2').onclick=pantallaIngreso;$('btnOrdAct').onclick=cargarOrdenes;$('volverPersona').onclick=function(){if(LP.tec)pantallaTec();else pantallaPersona();};
+$('btnSalir').onclick=function(){if(TEC){TEC=null;ORD=null;lsSet('inf_tec',null);pantallaIngreso();return;}if(DR&&!confirm('Tienes una revisión sin terminar. Si sales queda guardada para cuando vuelvas a entrar. ¿Salir?'))return;cerrarEscaner();USER=null;lsSet('inf_user',null);pantallaIngreso();};
 document.addEventListener('visibilitychange',function(){if(document.hidden){if(DR)kvSet('borrador',DR);}else{sincronizar();}});
 
 /* ============ ARRANQUE ============ */
 if('serviceWorker' in navigator&&location.protocol==='https:'){navigator.serviceWorker.register('sw.js').catch(function(){});}
 (function limpiarHist(){try{Object.keys(localStorage).forEach(function(k){if(k.indexOf('inf_hist_')===0&&k<'inf_hist_'+fecha(Date.now()-15*864e5))localStorage.removeItem(k);});}catch(e){}})();
 cargarConfig().then(function(){
- USER=lsGet('inf_user');
- if(CFG&&USER&&CFG.personal.some(function(p){return p.id===USER.id;}))entrar();else pantallaIngreso();
+ USER=lsGet('inf_user');TEC=lsGet('inf_tec');
+ if(CFG&&TEC&&(CFG.tecnicos||[]).some(function(p){return p.id===TEC.id&&p.pin===TEC.k;}))entrarTec();
+ else if(CFG&&USER&&CFG.personal.some(function(p){return p.id===USER.id;}))entrar();else{TEC=null;pantallaIngreso();}
  sincronizar();
 });
 </script>
