@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Códigos QR de áreas | IPS Salud del Caribe</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+body{margin:0;font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#10231C;background:#F2F5F4}
+.bar{max-width:1000px;margin:0 auto;padding:20px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.bar h1{font-size:1.4rem;margin:0 auto 0 0}
+label{display:flex;flex-direction:column;font-size:.85rem;color:#51645C;gap:4px}
+select,button{font:inherit;padding:8px 12px;border-radius:8px;border:1px solid #C9D5D0;background:#fff}
+button{background:#2D6FB3;color:#fff;border-color:#2D6FB3;font-weight:600;cursor:pointer}
+.nota{max-width:1000px;margin:0 auto;padding:0 20px 10px;color:#51645C}
+.grid{max-width:1000px;margin:0 auto;padding:0 20px 40px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.card{background:#fff;border:2px solid #2D6FB3;border-radius:14px;padding:14px;text-align:center;break-inside:avoid;page-break-inside:avoid}
+.card .s{font-size:.8rem;color:#51645C;font-weight:600}
+.card .a{font-size:1.15rem;font-weight:800;margin:4px 0 2px;line-height:1.2;min-height:2.4em;display:flex;align-items:center;justify-content:center}
+.card .p{display:inline-block;background:#2D6FB3;color:#fff;border-radius:99px;padding:1px 10px;font-size:.8rem;font-weight:700}
+.card .q{display:flex;justify-content:center;margin:10px 0 8px}
+.card .i{font-size:.75rem;color:#51645C}
+.card .id{font-size:.7rem;color:#8A9A92;margin-top:4px}
+@media print{.bar,.nota{display:none}body{background:#fff}.grid{padding:0;gap:8mm;max-width:none}.card{border-width:1.5px}@page{size:A4;margin:10mm}}
+@media (max-width:700px){.grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="bar">
+ <h1>Códigos QR de áreas</h1>
+ <label>Sede <select id="sede"></select></label>
+ <label>Piso <select id="piso"><option value="">Todos</option></select></label>
+ <button onclick="window.print()">Imprimir</button>
+</div>
+<p class="nota" id="nota">Cargando áreas desde el Google Sheet…</p>
+<div class="grid" id="grid"></div>
+<script>
+var API_URL='https://script.google.com/macros/s/AKfycbxFgV0FXkL9Y-UHpl6gROY9uJf1sLz6_ip3UC7oiM4tkm3zh147L3jqvM_832apbrHhPA/exec';
+try{var s=localStorage.getItem('inf_api');if(s)API_URL=s;var q=new URLSearchParams(location.search).get('api');if(q)API_URL=q;}catch(e){}
+var CFG=null;
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+fetch(API_URL+'?accion=config').then(function(r){return r.json();}).then(function(j){
+ if(!j.ok)throw new Error(j.error);CFG=j.config;
+ document.getElementById('sede').innerHTML=CFG.sedes.map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.nombre)+'</option>';}).join('');
+ document.getElementById('sede').onchange=pisos;document.getElementById('piso').onchange=dibujar;pisos();
+}).catch(function(e){document.getElementById('nota').textContent='No se pudo leer la configuración: '+e.message+'. Revise que el Apps Script esté implementado.';});
+function pisos(){var s=document.getElementById('sede').value,ps={};CFG.areas.forEach(function(a){if(a.sede===s)ps[a.piso]=1;});
+ document.getElementById('piso').innerHTML='<option value="">Todos</option>'+Object.keys(ps).sort().map(function(p){return '<option>'+esc(p)+'</option>';}).join('');dibujar();}
+function dibujar(){
+ var s=document.getElementById('sede').value,p=document.getElementById('piso').value,sede=CFG.sedes.filter(function(x){return x.id===s;})[0];
+ var L=CFG.areas.filter(function(a){return a.sede===s&&(!p||a.piso===p);}).sort(function(a,b){return a.piso<b.piso?-1:(a.piso>b.piso?1:0);});
+ document.getElementById('nota').textContent=L.length+' códigos. Pegue cada uno DENTRO del área (detrás de la puerta o junto al interruptor), a la altura de los ojos y protegido con cinta transparente o lámina.';
+ var g=document.getElementById('grid');
+ g.innerHTML=L.map(function(a,i){return '<div class="card"><div class="s">IPS Salud del Caribe | '+esc(sede.nombre)+'</div><div class="a">'+esc(a.nombre)+'</div><span class="p">Piso '+esc(a.piso)+'</span><div class="q" id="q'+i+'"></div><div class="i">Escanee con la app Revisión IPS. No retirar.</div><div class="id">'+esc(a.id)+'</div></div>';}).join('');
+ L.forEach(function(a,i){new QRCode(document.getElementById('q'+i),{text:'IPS-INF:'+a.token,width:180,height:180,correctLevel:QRCode.CorrectLevel.M});});
+}
+</script>
+</body>
+</html>

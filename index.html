@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2D6FB3">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Revisión de Infraestructura | IPS Salud del Caribe</title>
+<script src="jsQR.min.js" defer></script>
+<style>
+:root{--bg:#F2F5F4;--panel:#FFFFFF;--soft:#E8EEEC;--line:#D3DDD9;--ink:#10231C;--dim:#51645C;--blue:#2D6FB3;--blue2:#1F5690;--ok:#1F9D6E;--okbg:#E2F5EC;--bad:#D23C36;--badbg:#FCE9E8;--warn:#B7770F;--warnbg:#FFF4DE;--na:#6B7A74}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{padding-bottom:env(safe-area-inset-bottom,0px)}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.top{position:sticky;top:0;z-index:10;background:var(--blue);color:#fff;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;display:flex;align-items:center;gap:10px}
+.top .t{flex:1;min-width:0}
+.top b{display:block;font-size:1.05rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top small{display:block;font-size:.82rem;opacity:.9}
+.top button{background:rgba(255,255,255,.16);border:0;border-radius:10px;color:#fff;padding:8px 12px;font-size:.9rem}
+.wrap{max-width:560px;margin:0 auto;padding:16px}
+.screen{display:none}.screen.on{display:block}
+h1{font-size:1.5rem;margin:.4rem 0 .8rem;line-height:1.2}
+h2{font-size:1.2rem;margin:1.2rem 0 .6rem}
+.muted{color:var(--dim);font-size:.95rem}
+.big{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:64px;border:0;border-radius:16px;background:var(--blue);color:#fff;font-size:1.2rem;font-weight:700;padding:14px 18px;margin:8px 0}
+.big.alt{background:var(--panel);color:var(--ink);border:2px solid var(--line)}
+.big.ok{background:var(--ok)}
+.big:disabled{opacity:.45}
+.big .e{font-size:1.7rem}
+.list{display:flex;flex-direction:column;gap:10px}
+.opt{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:14px 16px;min-height:62px;font-size:1.1rem;font-weight:600}
+.opt .av{width:42px;height:42px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;flex-shrink:0}
+/* pin */
+.dots{display:flex;justify-content:center;gap:16px;margin:18px 0}
+.dots i{width:20px;height:20px;border-radius:50%;border:3px solid var(--blue)}
+.dots i.f{background:var(--blue)}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:340px;margin:0 auto}
+.pad button{height:72px;border-radius:16px;border:2px solid var(--line);background:var(--panel);font-size:1.7rem;font-weight:700}
+.pad button.x{font-size:1.1rem;color:var(--dim)}
+.shake{animation:sh .35s}
+@keyframes sh{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+/* home */
+.pill{display:flex;align-items:center;gap:10px;border-radius:12px;padding:10px 14px;font-size:.95rem;font-weight:600;margin-bottom:12px}
+.pill.ok{background:var(--okbg);color:#11694A}
+.pill.wait{background:var(--warnbg);color:var(--warn)}
+.prog{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin:10px 0}
+.prog .n{font-size:2rem;font-weight:800;line-height:1}
+.bar{height:12px;border-radius:99px;background:var(--soft);overflow:hidden;margin-top:10px}
+.bar div{height:100%;background:var(--ok);border-radius:99px;transition:width .3s}
+.piso{font-weight:700;color:var(--dim);font-size:.95rem;margin:16px 4px 6px}
+.row{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:6px}
+.row .nm{flex:1;font-weight:600}
+.row .st{font-size:.9rem;color:var(--dim);text-align:right}
+.row.done{border-color:#9ED9C0;background:var(--okbg)}
+.row.done .st{color:#11694A;font-weight:700}
+/* scan */
+.cam{position:relative;background:#000;border-radius:18px;overflow:hidden;aspect-ratio:3/4;margin:6px 0 12px}
+.cam video{width:100%;height:100%;object-fit:cover;display:block}
+.cam .fr{position:absolute;inset:18%;border:4px solid #fff;border-radius:18px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+.cam .msg{position:absolute;left:0;right:0;bottom:14px;text-align:center;color:#fff;font-weight:700;text-shadow:0 1px 3px #000}
+/* checklist */
+.head{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:12px}
+.head .ar{font-size:1.35rem;font-weight:800;line-height:1.2}
+.head .meta{display:flex;justify-content:space-between;gap:10px;color:var(--dim);font-size:.95rem;margin-top:6px}
+.head .timer{font-variant-numeric:tabular-nums;font-weight:700;color:var(--blue)}
+.flag{border-radius:12px;padding:10px 14px;font-size:.95rem;margin-bottom:10px}
+.flag.w{background:var(--warnbg);color:var(--warn);font-weight:600}
+.flag.i{background:#E6F0FA;color:var(--blue2)}
+.item{background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+.item.bien{border-color:var(--ok)}
+.item.mal{border-color:var(--bad);background:var(--badbg)}
+.item.na{border-color:var(--na)}
+.item.miss{box-shadow:0 0 0 4px rgba(210,60,54,.35)}
+.item .q{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.item .ic{font-size:2rem;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--soft);border-radius:12px;flex-shrink:0}
+.item .tx{flex:1;font-weight:700;font-size:1.05rem;line-height:1.25}
+.item .say{border:0;background:var(--soft);border-radius:10px;width:44px;height:44px;font-size:1.3rem;flex-shrink:0}
+.tri{display:grid;grid-template-columns:1fr 1fr .8fr;gap:8px}
+.tri button{border:2px solid var(--line);background:var(--panel);border-radius:12px;min-height:60px;font-weight:700;font-size:1rem;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.tri button span{font-size:1.5rem;line-height:1}
+.tri button.on[data-e=bien]{background:var(--ok);border-color:var(--ok);color:#fff}
+.tri button.on[data-e=mal]{background:var(--bad);border-color:var(--bad);color:#fff}
+.tri button.on[data-e=na]{background:var(--na);border-color:var(--na);color:#fff}
+.ev{margin-top:12px;display:none}
+.ev.on{display:block}
+.act{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:56px;border-radius:12px;border:2px dashed var(--bad);background:#fff;font-weight:700;font-size:1.05rem;margin-top:8px;color:var(--bad)}
+.act.done{border-style:solid;border-color:var(--ok);color:#11694A;background:var(--okbg)}
+.act.rec{background:var(--bad);color:#fff;border-style:solid;animation:pl 1.2s infinite}
+@keyframes pl{50%{opacity:.75}}
+.thumb{width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-top:8px;display:block}
+.trans{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px;font-size:1rem;min-height:44px}
+.trans:empty{display:none}
+textarea{width:100%;min-height:80px;border:2px solid var(--line);border-radius:10px;padding:10px;font:inherit;margin-top:8px}
+.lnk{background:none;border:0;color:var(--blue);font-weight:600;padding:8px 0;font-size:.95rem;text-decoration:underline}
+audio{width:100%;margin-top:8px}
+.final{background:var(--panel);border:2px solid var(--blue);border-radius:16px;padding:16px;margin:18px 0}
+.final.missing{border-color:var(--bad);box-shadow:0 0 0 4px rgba(210,60,54,.25)}
+.act.blue{border-color:var(--blue);color:var(--blue)}
+/* done */
+.okc{text-align:center;padding:30px 10px}
+.okc .ck{width:110px;height:110px;border-radius:50%;background:var(--ok);color:#fff;font-size:4rem;display:flex;align-items:center;justify-content:center;margin:10px auto 16px}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:#fff;padding:14px 18px;border-radius:14px;font-weight:600;max-width:92%;text-align:center;z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.on{opacity:1}
+.toast.bad{background:var(--bad)}
+.hidden{display:none!important}
+.brand{text-align:center;margin:22px 0 10px}
+.brand .lg{display:inline-flex;align-items:center;gap:10px;font-weight:800;color:var(--blue2);font-size:1.15rem}
+.brand .lg i{width:40px;height:40px;border-radius:10px;background:var(--blue);color:#fff;font-style:normal;display:flex;align-items:center;justify-content:center;font-size:1.3rem}
+.foot{color:var(--dim);font-size:.8rem;text-align:center;margin-top:24px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="top hidden" id="top">
+ <div class="t"><b id="topName"></b><small id="topSub"></small></div>
+ <button id="btnSalir">Salir</button>
+</header>
+
+<main class="wrap">
+
+<!-- INGRESO -->
+<section class="screen" id="sLogin">
+ <div class="brand"><div class="lg"><i>🏥</i>IPS Salud del Caribe</div><div class="muted">Revisión diaria de infraestructura (PAMTTO-FT-19)</div></div>
+ <div id="loginSede">
+  <h1>¿En qué sede estás?</h1>
+  <div class="list" id="sedeList"></div>
+ </div>
+ <div id="loginPersona" class="hidden">
+  <h1>¿Quién eres?</h1>
+  <div class="list" id="personaList"></div>
+  <button class="lnk" id="volverSede">← Cambiar de sede</button>
+ </div>
+ <div id="loginPin" class="hidden">
+  <h1 id="pinHola"></h1>
+  <p class="muted" style="text-align:center">Escribe tu clave de 4 números</p>
+  <div class="dots" id="dots"><i></i><i></i><i></i><i></i></div>
+  <div class="pad" id="pad"></div>
+  <p style="text-align:center"><button class="lnk" id="volverPersona">← No soy yo</button></p>
+ </div>
+ <div id="loginNoCfg" class="hidden">
+  <h1>Falta la primera conexión</h1>
+  <p>Conecta el celular a internet (wifi o datos) y vuelve a abrir la app. Solo se necesita la primera vez.</p>
+  <button class="big" onclick="location.reload()">Intentar de nuevo</button>
+  <p class="muted" id="noCfgErr"></p>
+ </div>
+</section>
+
+<!-- RONDA -->
+<section class="screen" id="sHome">
+ <div class="pill ok" id="pill">✅ Todo enviado</div>
+ <button class="big" id="btnScan" style="min-height:88px;font-size:1.35rem"><span class="e">📷</span> Escanear código del área</button>
+ <div class="prog">
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px">
+   <div><div class="n" id="progN">0 de 0</div><div class="muted">áreas revisadas hoy</div></div>
+   <div class="muted" id="progMal"></div>
+  </div>
+  <div class="bar"><div id="progBar" style="width:0%"></div></div>
+ </div>
+ <div id="ruta"></div>
+ <p class="foot" id="footVer"></p>
+</section>
+
+<!-- ESCANEAR -->
+<section class="screen" id="sScan">
+ <h1>Apunta al código del área</h1>
+ <div class="cam"><video id="video" playsinline muted></video><div class="fr"></div><div class="msg" id="camMsg">Buscando código…</div></div>
+ <button class="big alt" id="scanCancel">Cancelar</button>
+ <p style="text-align:center"><button class="lnk" id="noQR">El código no lee o no está</button></p>
+</section>
+
+<!-- SIN QR -->
+<section class="screen" id="sNoQR">
+ <h1>¿Qué pasa con el código?</h1>
+ <div class="list" id="motivoList"></div>
+ <div id="noQRAreas" class="hidden">
+  <h2>¿En qué área estás?</h2>
+  <p class="muted">Esta revisión queda marcada como "sin código QR" para el supervisor.</p>
+  <div class="list" id="areaPick"></div>
+ </div>
+ <button class="big alt" id="noQRCancel" style="margin-top:18px">Cancelar</button>
+</section>
+
+<!-- CHECKLIST -->
+<section class="screen" id="sCheck">
+ <div class="head"><div class="ar" id="cArea"></div><div class="meta"><span id="cPiso"></span><span>⏱ <span class="timer" id="cTimer">0:00</span></span></div></div>
+ <div id="cFlags"></div>
+ <p class="muted">Mira cada punto y toca 👍 si está bien o 👎 si está mal. Toca 🔊 para escuchar el punto.</p>
+ <div id="items"></div>
+ <div class="final" id="finalBox">
+  <div style="font-weight:800;font-size:1.1rem">📸 Foto general del área</div>
+  <div class="muted">Toma una foto donde se vea el área completa.</div>
+  <button class="act blue" id="btnFotoArea">📷 Tomar foto del área</button>
+  <img class="thumb hidden" id="fotoAreaImg" alt="Foto del área">
+ </div>
+ <button class="big ok" id="btnGuardar" style="min-height:76px"><span class="e">✔️</span> Terminar y guardar</button>
+ <p style="text-align:center"><button class="lnk" id="btnDescartar" style="color:var(--bad)">Cancelar esta revisión</button></p>
+</section>
+
+<!-- LISTO -->
+<section class="screen" id="sDone">
+ <div class="okc"><div class="ck">✓</div><h1 id="doneT">¡Área revisada!</h1><p id="doneS" class="muted"></p></div>
+ <button class="big" id="doneScan"><span class="e">📷</span> Revisar la siguiente área</button>
+ <button class="big alt" id="doneHome">Ver mi ronda</button>
+</section>
+
+</main>
+
+<input type="file" id="camIn" accept="image/*" capture="environment" class="hidden">
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ CONFIGURACIÓN ============ */
+var API_URL = 'https://script.google.com/macros/s/AKfycbxFgV0FXkL9Y-UHpl6gROY9uJf1sLz6_ip3UC7oiM4tkm3zh147L3jqvM_832apbrHhPA/exec';
+var VERSION = '1.0';
+var PROB_VERIF = 0.25;        // probabilidad de verificación al azar por área
+var FOTO_MAX_MIN = 3;         // minutos máximos de antigüedad de una foto
+var QR_PREFIX = 'IPS-INF:';
+
+(function(){ try{var q=new URLSearchParams(location.search).get('api');if(q){localStorage.setItem('inf_api',q);}var s=localStorage.getItem('inf_api');if(s)API_URL=s;}catch(e){} })();
+
+/* ============ UTILIDADES ============ */
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function pad2(n){return (n<10?'0':'')+n;}
+function fecha(t){var d=new Date(t);return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());}
+function hora(t){var d=new Date(t);return pad2(d.getHours())+':'+pad2(d.getMinutes())+':'+pad2(d.getSeconds());}
+function hm(t){var d=new Date(t);return pad2(d.getHours())+':'+pad2(d.getMinutes());}
+function hoy(){return fecha(Date.now());}
+function uid(){return 'R'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,6).toUpperCase();}
+function lsGet(k){try{var v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+function toast(m,bad){var t=$('toast');t.textContent=m;t.className='toast on'+(bad?' bad':'');clearTimeout(t._t);t._t=setTimeout(function(){t.className='toast';},bad?4200:2600);}
+function vib(p){try{navigator.vibrate&&navigator.vibrate(p);}catch(e){}}
+function show(id){Array.prototype.forEach.call(document.querySelectorAll('.screen'),function(s){s.classList.toggle('on',s.id===id);});$('top').classList.toggle('hidden',id==='sLogin');window.scrollTo(0,0);}
+function iniciales(n){var p=String(n).trim().split(/\s+/);return ((p[0]||'')[0]||'')+((p[1]||'')[0]||'');}
+function distM(a,b,c,d){var R=6371000,r=Math.PI/180,x=(c-a)*r,y=(d-b)*r,h=Math.sin(x/2)*Math.sin(x/2)+Math.cos(a*r)*Math.cos(c*r)*Math.sin(y/2)*Math.sin(y/2);return Math.round(2*R*Math.asin(Math.sqrt(h)));}
+function sha256(t){var b=new TextEncoder().encode(t);return crypto.subtle.digest('SHA-256',b).then(function(h){return Array.prototype.map.call(new Uint8Array(h),function(x){return ('0'+x.toString(16)).slice(-2);}).join('');});}
+function hablar(t){try{speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(t);u.lang='es-CO';u.rate=0.95;speechSynthesis.speak(u);}catch(e){toast('Este celular no puede leer en voz alta');}}
+
+var ICONOS=[[/unidad(es)? odontol/,'🦷'],[/nevera|microondas/,'🧊'],[/lavamanos|sanitario|dispensador|llaves|bandeja/,'🚰'],[/baño completo/,'🚽'],[/luces|luz|ilumina/,'💡'],[/puerta|ventana|cerradura|sensores/,'🚪'],[/camilla/,'🛏️'],[/silla|sillería/,'🪑'],[/tomacorriente|cableado|canaleta/,'🔌'],[/caneca/,'🗑️'],[/escritorio|mueble|archivador|estanter|almacenamiento|mobiliario/,'🗄️'],[/biombo/,'🩺'],[/escalerilla|pasamanos/,'🪜'],[/mesa de mayo/,'🧰'],[/televisor|pantalla/,'📺'],[/botonera|ascensor/,'🛗'],[/emergencia|seccional/,'🚨'],[/orden y limpieza|limpieza|higiene/,'🧹'],[/fachada|pintura/,'🏢'],[/cerramiento|baranda/,'🚧'],[/media(s)? caña/,'📐'],[/pared|muro|techo|zócalo/,'🧱'],[/piso|baldos/,'🟫'],[/físicas generales/,'🔎']];
+function icono(t){t=t.toLowerCase();for(var i=0;i<ICONOS.length;i++)if(ICONOS[i][0].test(t))return ICONOS[i][1];return '🔎';}
+
+/* ============ BASE DE DATOS LOCAL (IndexedDB) ============ */
+var DBP=null;
+function db(){if(DBP)return DBP;DBP=new Promise(function(ok,ko){var r=indexedDB.open('inf_db',1);r.onupgradeneeded=function(){var d=r.result;d.createObjectStore('cola',{keyPath:'id'});d.createObjectStore('kv');};r.onsuccess=function(){ok(r.result);};r.onerror=function(){ko(r.error);};});return DBP;}
+function tx(store,mode,fn){return db().then(function(d){return new Promise(function(ok,ko){var t=d.transaction(store,mode),s=t.objectStore(store),res=fn(s);t.oncomplete=function(){ok(res&&res.result!==undefined?res.result:res);};t.onerror=function(){ko(t.error);};});});}
+function qPut(r){return tx('cola','readwrite',function(s){s.put(r);});}
+function qDel(id){return tx('cola','readwrite',function(s){s.delete(id);});}
+function qAll(){return db().then(function(d){return new Promise(function(ok){var out=[],c=d.transaction('cola').objectStore('cola').openCursor();c.onsuccess=function(){var x=c.result;if(x){out.push(x.value);x.continue();}else ok(out);};c.onerror=function(){ok(out);};});});}
+function kvSet(k,v){return tx('kv','readwrite',function(s){s.put(v,k);});}
+function kvDel(k){return tx('kv','readwrite',function(s){s.delete(k);});}
+function kvGet(k){return db().then(function(d){return new Promise(function(ok){var r=d.transaction('kv').objectStore('kv').get(k);r.onsuccess=function(){ok(r.result);};r.onerror=function(){ok(null);};});});}
+
+/* ============ ESTADO ============ */
+var CFG=null, USER=null, SEDE=null, DR=null, TIMER=null;
+function hist(){return lsGet('inf_hist_'+hoy())||[];}
+function setHist(h){lsSet('inf_hist_'+hoy(),h);}
+
+/* ============ CONFIG ============ */
+function cargarConfig(){
+ CFG=lsGet('inf_cfg');
+ if(!navigator.onLine)return Promise.resolve(CFG);
+ var ctl=new AbortController();setTimeout(function(){ctl.abort();},12000);
+ return fetch(API_URL+'?accion=config',{signal:ctl.signal}).then(function(r){return r.json();}).then(function(j){if(j.ok&&j.config){CFG=j.config;lsSet('inf_cfg',CFG);}else throw new Error(j.error||'Respuesta inválida');return CFG;})
+  .catch(function(e){$('noCfgErr').textContent=CFG?'':'Detalle: '+e.message;return CFG;});
+}
+
+/* ============ INGRESO ============ */
+var LP={sede:null,persona:null,pin:''};
+function pantallaIngreso(){
+ show('sLogin');
+ ['loginSede','loginPersona','loginPin','loginNoCfg'].forEach(function(i){$(i).classList.add('hidden');});
+ if(!CFG||!CFG.sedes||!CFG.sedes.length){$('loginNoCfg').classList.remove('hidden');return;}
+ $('loginSede').classList.remove('hidden');
+ $('sedeList').innerHTML=CFG.sedes.map(function(s){return '<button class="opt" data-s="'+esc(s.id)+'"><span class="av">🏥</span>'+esc(s.nombre)+'<span class="muted" style="margin-left:auto;font-weight:400">'+esc(s.ciudad)+'</span></button>';}).join('');
+ Array.prototype.forEach.call($('sedeList').children,function(b){b.onclick=function(){LP.sede=b.getAttribute('data-s');pantallaPersona();};});
+}
+function pantallaPersona(){
+ $('loginSede').classList.add('hidden');$('loginPin').classList.add('hidden');$('loginPersona').classList.remove('hidden');
+ var ps=CFG.personal.filter(function(p){return p.sede===LP.sede;});
+ $('personaList').innerHTML=ps.length?ps.map(function(p){return '<button class="opt" data-p="'+esc(p.id)+'"><span class="av">'+esc(iniciales(p.nombre).toUpperCase())+'</span>'+esc(p.nombre)+'</button>';}).join(''):'<p>No hay personal registrado en esta sede. Avísale a tu supervisor.</p>';
+ Array.prototype.forEach.call($('personaList').children,function(b){b.onclick=function(){LP.persona=CFG.personal.filter(function(p){return p.id===b.getAttribute('data-p');})[0];pantallaPin();};});
+}
+function pantallaPin(){
+ $('loginPersona').classList.add('hidden');$('loginPin').classList.remove('hidden');
+ $('pinHola').textContent='Hola, '+LP.persona.nombre.split(' ')[0];LP.pin='';dibujaDots();
+ var k=['1','2','3','4','5','6','7','8','9','⌫','0',''];
+ $('pad').innerHTML=k.map(function(x){return x?'<button data-k="'+x+'" class="'+(x==='⌫'?'x':'')+'">'+x+'</button>':'<span></span>';}).join('');
+ Array.prototype.forEach.call($('pad').querySelectorAll('button'),function(b){b.onclick=function(){var x=b.getAttribute('data-k');if(x==='⌫')LP.pin=LP.pin.slice(0,-1);else if(LP.pin.length<4)LP.pin+=x;dibujaDots();if(LP.pin.length===4)validarPin();};});
+}
+function dibujaDots(){Array.prototype.forEach.call($('dots').children,function(d,i){d.classList.toggle('f',i<LP.pin.length);});}
+function validarPin(){
+ sha256(LP.persona.id+'|'+LP.pin).then(function(h){
+  if(h===LP.persona.pin){USER={id:LP.persona.id,nombre:LP.persona.nombre,sede:LP.sede};lsSet('inf_user',USER);vib(40);entrar();}
+  else{vib([80,60,80]);$('dots').classList.add('shake');setTimeout(function(){$('dots').classList.remove('shake');LP.pin='';dibujaDots();},400);toast('Clave incorrecta',true);}
+ }).catch(function(){toast('Este navegador no permite validar la clave. Abre la app desde el enlace oficial.',true);});
+}
+
+/* ============ RONDA ============ */
+function entrar(){
+ SEDE=CFG.sedes.filter(function(s){return s.id===USER.sede;})[0];
+ if(!SEDE){lsSet('inf_user',null);USER=null;pantallaIngreso();return;}
+ $('topName').textContent=USER.nombre;$('topSub').textContent=SEDE.nombre;
+ kvGet('borrador').then(function(d){if(d&&d.persona_id===USER.id&&fecha(d.ini)===hoy()){DR=d;abrirChecklist(true);}else{if(d)kvDel('borrador');home();}});
+}
+function home(){
+ show('sHome');
+ var areas=CFG.areas.filter(function(a){return a.sede===USER.sede;}),h=hist(),map={};
+ h.forEach(function(x){map[x.area_id]=x;});
+ var done=areas.filter(function(a){return map[a.id];}).length,mal=h.reduce(function(s,x){return s+(x.malos||0);},0);
+ $('progN').textContent=done+' de '+areas.length;
+ $('progBar').style.width=(areas.length?done/areas.length*100:0)+'%';
+ $('progMal').textContent=mal?'⚠️ '+mal+' novedad'+(mal>1?'es':''):'';
+ var pisos={};areas.forEach(function(a){(pisos[a.piso]=pisos[a.piso]||[]).push(a);});
+ $('ruta').innerHTML=Object.keys(pisos).sort(function(a,b){return (+a||0)-(+b||0);}).map(function(p){
+  var L=pisos[p],d=L.filter(function(a){return map[a.id];}).length;
+  return '<div class="piso">Piso '+esc(p)+' · '+d+' de '+L.length+'</div>'+L.map(function(a){var x=map[a.id];
+   return '<div class="row'+(x?' done':'')+'"><span class="nm">'+esc(a.nombre)+'</span><span class="st">'+(x?'✅ '+hm(x.fin)+(x.malos?'<br>⚠️ '+x.malos:'')+(x.enviado?' ☁️':''):'Pendiente')+'</span></div>';}).join('');
+ }).join('');
+ $('footVer').textContent='Versión '+VERSION+'. Hoy '+hoy()+'.';
+ actualizarPill();
+}
+function actualizarPill(){
+ qAll().then(function(q){var p=$('pill');
+  if(!q.length){p.className='pill ok';p.textContent='✅ Todo enviado al supervisor';}
+  else if(!navigator.onLine){p.className='pill wait';p.textContent='📴 Sin internet: '+q.length+' revisión'+(q.length>1?'es':'')+' guardada'+(q.length>1?'s':'')+' en el celular. Se envían solas cuando vuelva la señal.';}
+  else{p.className='pill wait';p.textContent='⬆️ Enviando '+q.length+' revisión'+(q.length>1?'es':'')+'…';}
+ });
+}
+
+/* ============ ESCÁNER QR ============ */
+var STREAM=null,SCANNING=false,DETECTOR=null;
+function abrirEscaner(){
+ show('sScan');$('camMsg').textContent='Buscando código…';
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('camMsg').textContent='Este celular no permite usar la cámara aquí.';return;}
+ navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false}).then(function(s){
+  STREAM=s;var v=$('video');v.srcObject=s;v.play();SCANNING=true;
+  if('BarcodeDetector' in window){try{DETECTOR=new BarcodeDetector({formats:['qr_code']});}catch(e){DETECTOR=null;}}
+  setTimeout(loopScan,300);
+ }).catch(function(){$('camMsg').textContent='Da permiso a la cámara para escanear.';toast('Permite el uso de la cámara',true);});
+}
+function cerrarEscaner(){SCANNING=false;if(STREAM){STREAM.getTracks().forEach(function(t){t.stop();});STREAM=null;}}
+var CV=document.createElement('canvas');
+function loopScan(){
+ if(!SCANNING)return;var v=$('video');
+ if(v.readyState<2){setTimeout(loopScan,200);return;}
+ if(DETECTOR){DETECTOR.detect(v).then(function(r){if(r&&r.length)leido(r[0].rawValue);else setTimeout(loopScan,180);}).catch(function(){DETECTOR=null;setTimeout(loopScan,180);});return;}
+ if(window.jsQR){var w=480,h=Math.round(v.videoHeight/v.videoWidth*w)||360;CV.width=w;CV.height=h;var c=CV.getContext('2d',{willReadFrequently:true});c.drawImage(v,0,0,w,h);var im=c.getImageData(0,0,w,h),r=jsQR(im.data,w,h,{inversionAttempts:'dontInvert'});if(r&&r.data){leido(r.data);return;}}
+ setTimeout(loopScan,220);
+}
+function leido(txt){
+ txt=String(txt||'').trim();
+ var tok=txt.indexOf(QR_PREFIX)===0?txt.slice(QR_PREFIX.length):(txt.indexOf('#q=')>=0?txt.split('#q=')[1]:'');
+ var a=CFG.areas.filter(function(x){return x.token===tok;})[0];
+ if(!a){$('camMsg').textContent='Ese código no es de revisión de áreas';vib(60);setTimeout(function(){$('camMsg').textContent='Buscando código…';loopScan();},1500);return;}
+ if(a.sede!==USER.sede){var so=CFG.sedes.filter(function(s){return s.id===a.sede;})[0];$('camMsg').textContent='Ese código es de la sede '+(so?so.nombre:a.sede);vib(60);setTimeout(loopScan,1800);return;}
+ vib([40,40,40]);cerrarEscaner();iniciarRevision(a,'ok','');
+}
+
+/* ============ SIN QR ============ */
+var MOTIVOS=['🩹 El código está dañado','❓ El código no está en la puerta','📷 La cámara no lo lee'];
+function sinQR(){
+ cerrarEscaner();show('sNoQR');$('noQRAreas').classList.add('hidden');$('motivoList').classList.remove('hidden');
+ $('motivoList').innerHTML=MOTIVOS.map(function(m,i){return '<button class="opt" data-i="'+i+'">'+m+'</button>';}).join('');
+ Array.prototype.forEach.call($('motivoList').children,function(b){b.onclick=function(){var mot=MOTIVOS[+b.getAttribute('data-i')].replace(/^\S+\s/,'');
+  $('motivoList').classList.add('hidden');$('noQRAreas').classList.remove('hidden');
+  var h=hist(),hecho={};h.forEach(function(x){hecho[x.area_id]=1;});
+  var L=CFG.areas.filter(function(a){return a.sede===USER.sede&&!hecho[a.id];});
+  $('areaPick').innerHTML=L.map(function(a){return '<button class="opt" data-a="'+esc(a.id)+'"><span class="av" style="background:var(--soft);color:var(--ink)">P'+esc(a.piso)+'</span>'+esc(a.nombre)+'</button>';}).join('')||'<p>Ya revisaste todas las áreas de hoy.</p>';
+  Array.prototype.forEach.call($('areaPick').children,function(x){x.onclick=function(){var a=CFG.areas.filter(function(q){return q.id===x.getAttribute('data-a');})[0];iniciarRevision(a,'sin_qr',mot);};});
+ };});
+}
+
+/* ============ REVISIÓN ============ */
+function iniciarRevision(a,qr,motivo){
+ var tip=CFG.tipologias[a.tipo]||{nombre:a.tipo,puntos:['Condiciones de pisos','Estado de luces','Estado de paredes, muros y techos']};
+ var items=tip.puntos.map(function(c){return {c:c,e:'',foto:null,texto:'',audio:null,verif:false};});
+ if(Math.random()<PROB_VERIF&&items.length){items[Math.floor(Math.random()*items.length)].verif=true;}
+ var h=hist(),prev=h.length?h[h.length-1]:null;
+ DR={id:uid(),persona_id:USER.id,persona:USER.nombre,sede_id:SEDE.id,sede:SEDE.nombre,area_id:a.id,area:a.nombre,piso:a.piso,tipologia:tip.nombre,
+  ini:Date.now(),qr:qr,motivo:motivo,items:items,foto_area:null,gps:null,prev:prev?{area:prev.area,fin:prev.fin,piso:prev.piso}:null,reabierta:0};
+ guardarBorrador();pedirGPS();abrirChecklist(false);
+}
+function pedirGPS(){
+ if(!navigator.geolocation)return;
+ navigator.geolocation.getCurrentPosition(function(p){if(!DR)return;DR.gps={lat:+p.coords.latitude.toFixed(6),lng:+p.coords.longitude.toFixed(6),acc:Math.round(p.coords.accuracy)};guardarBorrador();},function(){},{enableHighAccuracy:true,timeout:20000,maximumAge:60000});
+}
+var BT=null;function guardarBorrador(){clearTimeout(BT);BT=setTimeout(function(){if(DR)kvSet('borrador',DR);},250);}
+
+function abrirChecklist(reanudada){
+ show('sCheck');
+ if(reanudada){DR.reabierta=(DR.reabierta||0)+1;guardarBorrador();}
+ $('cArea').textContent=DR.area;$('cPiso').textContent='Piso '+DR.piso+' · '+DR.tipologia;
+ var f='';
+ if(reanudada)f+='<div class="flag i">Seguimos con la revisión que estabas haciendo.</div>';
+ if(DR.qr!=='ok')f+='<div class="flag w">Revisión sin código QR: '+esc(DR.motivo)+'. Queda marcada para el supervisor.</div>';
+ if(DR.items.some(function(x){return x.verif;}))f+='<div class="flag w">📸 Hoy te toca verificación: uno de los puntos pide foto aunque esté bien.</div>';
+ $('cFlags').innerHTML=f;
+ dibujarItems();fotoAreaUI();
+ clearInterval(TIMER);TIMER=setInterval(function(){if(!DR)return;var s=Math.floor((Date.now()-DR.ini)/1000);$('cTimer').textContent=Math.floor(s/60)+':'+pad2(s%60);},1000);
+}
+function dibujarItems(){
+ $('items').innerHTML=DR.items.map(function(it,i){
+  return '<div class="item '+it.e+'" id="it'+i+'"><div class="q"><div class="ic">'+icono(it.c)+'</div><div class="tx">'+esc(it.c)+'</div><button class="say" data-say="'+i+'" aria-label="Escuchar">🔊</button></div>'+
+   (it.verif?'<div class="flag w" style="margin:-4px 0 10px">📸 Toma una foto de este punto</div>':'')+
+   '<div class="tri"><button data-i="'+i+'" data-e="bien" class="'+(it.e==='bien'?'on':'')+'"><span>👍</span>Bien</button><button data-i="'+i+'" data-e="mal" class="'+(it.e==='mal'?'on':'')+'"><span>👎</span>Mal</button><button data-i="'+i+'" data-e="na" class="'+(it.e==='na'?'on':'')+'"><span>➖</span>No hay</button></div>'+
+   '<div class="ev" id="ev'+i+'"></div></div>';
+ }).join('');
+ Array.prototype.forEach.call($('items').querySelectorAll('.tri button'),function(b){b.onclick=function(){var i=+b.getAttribute('data-i');DR.items[i].e=b.getAttribute('data-e');guardarBorrador();refrescarItem(i);vib(15);};});
+ Array.prototype.forEach.call($('items').querySelectorAll('[data-say]'),function(b){b.onclick=function(){hablar(DR.items[+b.getAttribute('data-say')].c);};});
+ DR.items.forEach(function(x,i){evUI(i);});
+}
+function refrescarItem(i){
+ var it=DR.items[i],el=$('it'+i);el.className='item '+it.e;
+ Array.prototype.forEach.call(el.querySelectorAll('.tri button'),function(b){b.classList.toggle('on',b.getAttribute('data-e')===it.e);});
+ evUI(i);
+}
+function evUI(i){
+ var it=DR.items[i],ev=$('ev'+i),h='';
+ var needFoto=it.e==='mal'||it.verif,needVoz=it.e==='mal';
+ if(needFoto)h+='<button class="act'+(it.foto?' done':'')+'" data-foto="'+i+'">'+(it.foto?'✅ Foto lista (tocar para repetir)':'📷 Tomar foto'+(it.e==='mal'?' del daño':''))+'</button>'+(it.foto?'<img class="thumb" src="'+it.foto+'" alt="">':'');
+ if(needVoz){
+  h+='<button class="act'+((it.texto||it.audio)?' done':'')+'" data-voz="'+i+'">'+((it.texto||it.audio)?'✅ Novedad contada (tocar para repetir)':'🎤 Contar qué pasa')+'</button>';
+  h+='<div class="trans" id="tr'+i+'">'+esc(it.texto)+'</div>';
+  if(it.audio)h+='<audio controls src="'+it.audio+'"></audio>';
+  h+='<button class="lnk" data-esc="'+i+'">✏️ Prefiero escribir</button><textarea class="'+(it._w?'':'hidden')+'" data-ta="'+i+'" placeholder="Escribe qué pasa">'+esc(it.texto)+'</textarea>';
+ }
+ ev.innerHTML=h;ev.classList.toggle('on',!!h);
+ var fb=ev.querySelector('[data-foto]');if(fb)fb.onclick=function(){tomarFoto(function(u){DR.items[i].foto=u;guardarBorrador();evUI(i);},'Punto: '+it.c);};
+ var vb=ev.querySelector('[data-voz]');if(vb)vb.onclick=function(){grabar(i,vb);};
+ var eb=ev.querySelector('[data-esc]');if(eb)eb.onclick=function(){it._w=true;var ta=ev.querySelector('textarea');ta.classList.remove('hidden');ta.focus();};
+ var ta=ev.querySelector('textarea');if(ta)ta.oninput=function(){it.texto=ta.value;guardarBorrador();};
+ $('it'+i).classList.remove('miss');
+}
+
+/* ============ FOTOS ============ */
+var FOTO_CB=null,FOTO_LAB='';
+function tomarFoto(cb,lab){FOTO_CB=cb;FOTO_LAB=lab||'';guardarBorrador();$('camIn').value='';$('camIn').click();}
+$('camIn').onchange=function(e){
+ var f=e.target.files&&e.target.files[0];if(!f||!FOTO_CB)return;
+ if(f.lastModified&&Date.now()-f.lastModified>FOTO_MAX_MIN*60000){toast('Esa foto no es de ahora. Tómala con la cámara en este momento.',true);vib([80,60,80]);return;}
+ toast('Preparando foto…');
+ procesarFoto(f,FOTO_LAB).then(function(u){FOTO_CB(u);FOTO_CB=null;}).catch(function(){toast('No se pudo leer la foto. Intenta de nuevo.',true);});
+};
+function cargarImg(f){
+ if(window.createImageBitmap)return createImageBitmap(f,{imageOrientation:'from-image'}).catch(function(){return porImg(f);});
+ return porImg(f);
+}
+function porImg(f){return new Promise(function(ok,ko){var u=URL.createObjectURL(f),i=new Image();i.onload=function(){ok(i);};i.onerror=ko;i.src=u;});}
+function procesarFoto(f,lab){
+ return cargarImg(f).then(function(img){
+  var w=img.width,h=img.height,sc=Math.min(1,1280/Math.max(w,h)),cw=Math.round(w*sc),ch=Math.round(h*sc);
+  var c=document.createElement('canvas');c.width=cw;c.height=ch;var x=c.getContext('2d');x.drawImage(img,0,0,cw,ch);
+  var t=Date.now(),d=new Date(t),fs=Math.max(15,Math.round(cw/40));
+  var L=['IPS Salud del Caribe | '+SEDE.nombre+' | '+DR.area+' (piso '+DR.piso+')',pad2(d.getDate())+'/'+pad2(d.getMonth()+1)+'/'+d.getFullYear()+' '+hora(t)+' | '+USER.nombre];
+  if(lab)L.push(lab);
+  if(DR.gps)L.push('GPS '+DR.gps.lat+', '+DR.gps.lng+' (±'+DR.gps.acc+' m)');
+  var lh=fs*1.35,bh=lh*L.length+fs*.7;
+  x.fillStyle='rgba(0,0,0,.62)';x.fillRect(0,ch-bh,cw,bh);x.fillStyle='#fff';x.font='600 '+fs+'px system-ui,sans-serif';
+  L.forEach(function(l,i){x.fillText(l.length>70?l.slice(0,69)+'…':l,fs*.6,ch-bh+fs*1.15+i*lh);});
+  return c.toDataURL('image/jpeg',0.62);
+ });
+}
+function fotoAreaUI(){
+ var b=$('btnFotoArea'),im=$('fotoAreaImg');
+ b.className='act blue'+(DR.foto_area?' done':'');b.textContent=DR.foto_area?'✅ Foto lista (tocar para repetir)':'📷 Tomar foto del área';
+ if(DR.foto_area){im.src=DR.foto_area;im.classList.remove('hidden');}else im.classList.add('hidden');
+ $('finalBox').classList.remove('missing');
+}
+$('btnFotoArea').onclick=function(){tomarFoto(function(u){DR.foto_area=u;guardarBorrador();fotoAreaUI();},'Foto general del área');};
+
+/* ============ VOZ ============ */
+var REC=null,REC_I=null;
+function grabar(i,btn){
+ if(REC){detener();return;}
+ var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(SR&&navigator.onLine&&!DR.items[i]._audioMode)dictado(i,btn,SR);else audioNota(i,btn);
+}
+function detener(){if(!REC)return;try{REC.stop();}catch(e){}}
+function dictado(i,btn,SR){
+ var it=DR.items[i],r=new SR(),fin='',vivo='',err=null;
+ r.lang='es-CO';r.continuous=true;r.interimResults=true;REC=r;REC_I=i;
+ btn.className='act rec';btn.textContent='⏹️ Tocar para terminar (te estoy escuchando)';
+ var tr=$('tr'+i);tr.textContent='…';
+ r.onresult=function(e){vivo='';for(var k=e.resultIndex;k<e.results.length;k++){if(e.results[k].isFinal)fin+=e.results[k][0].transcript+' ';else vivo+=e.results[k][0].transcript;}tr.textContent=(fin+vivo).trim()||'…';};
+ r.onerror=function(e){err=e.error;};
+ r.onend=function(){REC=null;var t=(fin+vivo).trim();
+  if(t){it.texto=t.charAt(0).toUpperCase()+t.slice(1);it._audioMode=false;guardarBorrador();evUI(i);vib(30);return;}
+  it._audioMode=true;evUI(i);
+  toast(err==='not-allowed'||err==='service-not-allowed'?'Da permiso al micrófono.':'No se entendió. Toca otra vez y graba un audio.',true);
+ };
+ setTimeout(function(){if(REC===r)detener();},60000);
+ try{r.start();}catch(e){REC=null;it._audioMode=true;audioNota(i,btn);}
+}
+function audioNota(i,btn){
+ if(!navigator.mediaDevices||!window.MediaRecorder){toast('Este celular no graba audio. Usa "Prefiero escribir".',true);return;}
+ navigator.mediaDevices.getUserMedia({audio:true}).then(function(st){
+  var mt=MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':(MediaRecorder.isTypeSupported('audio/mp4')?'audio/mp4':'');
+  var m=new MediaRecorder(st,mt?{mimeType:mt,audioBitsPerSecond:24000}:{}),ch=[];
+  REC={stop:function(){if(m.state!=='inactive')m.stop();}};REC_I=i;
+  btn.className='act rec';btn.textContent='⏹️ Tocar para terminar (grabando audio)';
+  m.ondataavailable=function(e){if(e.data&&e.data.size)ch.push(e.data);};
+  m.onstop=function(){st.getTracks().forEach(function(t){t.stop();});REC=null;
+   var b=new Blob(ch,{type:m.mimeType||'audio/webm'});if(b.size<2000){toast('El audio quedó vacío. Intenta de nuevo.',true);evUI(i);return;}
+   var fr=new FileReader();fr.onload=function(){DR.items[i].audio=fr.result;guardarBorrador();evUI(i);vib(30);};fr.readAsDataURL(b);};
+  m.start(1000);setTimeout(function(){if(m.state!=='inactive')m.stop();},60000);
+ }).catch(function(){toast('Da permiso al micrófono para grabar.',true);});
+}
+
+/* ============ GUARDAR ============ */
+function validar(){
+ for(var i=0;i<DR.items.length;i++){var it=DR.items[i],m='';
+  if(!it.e)m='Falta marcar este punto';
+  else if((it.e==='mal'||it.verif)&&!it.foto)m='Falta la foto de este punto';
+  else if(it.e==='mal'&&!it.texto&&!it.audio)m='Falta contar qué pasa (toca 🎤)';
+  if(m){var el=$('it'+i);el.classList.add('miss');el.scrollIntoView({behavior:'smooth',block:'center'});toast(m,true);vib([80,60,80]);return false;}}
+ if(!DR.foto_area){$('finalBox').classList.add('missing');$('finalBox').scrollIntoView({behavior:'smooth',block:'center'});toast('Falta la foto general del área',true);vib([80,60,80]);return false;}
+ return true;
+}
+$('btnGuardar').onclick=function(){
+ if(REC){detener();toast('Terminando la grabación…');return;}
+ if(!validar())return;
+ var fin=Date.now(),dur=Math.round((fin-DR.ini)/1000),n=DR.items.length,al=[];
+ var minimo=Math.max(60,n*5);
+ if(dur<minimo)al.push('Revisión muy rápida: '+dur+' s para '+n+' puntos');
+ if(DR.prev&&DR.ini-DR.prev.fin<20000)al.push('Pasó de "'+DR.prev.area+'" a esta área en '+Math.round((DR.ini-DR.prev.fin)/1000)+' s');
+ var dist=null;
+ if(DR.gps&&SEDE.lat!=null&&SEDE.lng!=null){dist=distM(DR.gps.lat,DR.gps.lng,SEDE.lat,SEDE.lng);if(dist>(SEDE.radio||150)+(DR.gps.acc||0))al.push('Ubicación fuera de la sede ('+dist+' m)');}
+ if(!DR.gps)al.push('Sin ubicación GPS');
+ if(DR.qr!=='ok')al.push('Sin QR: '+DR.motivo);
+ var malos=DR.items.filter(function(x){return x.e==='mal';}).length;
+ var rec={tipo:'revision',id:DR.id,creado:fin,fecha:fecha(DR.ini),hora_ini:hora(DR.ini),hora_fin:hora(fin),dur:dur,sede_id:DR.sede_id,sede:DR.sede,piso:DR.piso,
+  area_id:DR.area_id,area:DR.area,tipologia:DR.tipologia,persona_id:DR.persona_id,persona:DR.persona,qr:DR.qr,motivo:DR.motivo,
+  lat:DR.gps?DR.gps.lat:'',lng:DR.gps?DR.gps.lng:'',acc:DR.gps?DR.gps.acc:'',dist:dist,alertas:al,offline:!navigator.onLine,
+  disp:(navigator.userAgent.match(/\(([^)]+)\)/)||['',''])[1].slice(0,80),foto_area:DR.foto_area,
+  items:DR.items.map(function(x){return {c:x.c,e:x.e,foto:x.foto,texto:x.texto,audio:x.audio,verif:x.verif};})};
+ qPut(rec).then(function(){
+  var h=hist();h.push({id:rec.id,area_id:DR.area_id,area:DR.area,piso:DR.piso,ini:DR.ini,fin:fin,malos:malos,enviado:false});setHist(h);
+  clearInterval(TIMER);var a=DR.area;DR=null;return kvDel('borrador').then(function(){
+   $('doneT').textContent='¡'+a+' revisada!';
+   $('doneS').textContent=(malos?malos+' novedad'+(malos>1?'es':'')+' reportada'+(malos>1?'s':'')+'. ':'Todo en buen estado. ')+(navigator.onLine?'Enviando al supervisor…':'Sin internet: se envía sola cuando vuelva la señal.');
+   show('sDone');vib([60,40,120]);sincronizar();});
+ }).catch(function(){toast('No se pudo guardar en el celular. Libera espacio e intenta de nuevo.',true);});
+};
+$('btnDescartar').onclick=function(){if(!confirm('¿Cancelar esta revisión? Se pierde lo marcado.'))return;clearInterval(TIMER);DR=null;kvDel('borrador').then(home);};
+
+/* ============ ENVÍO ============ */
+var SYNC=false;
+function sincronizar(){
+ if(SYNC||!navigator.onLine){actualizarPill();return;}
+ SYNC=true;actualizarPill();
+ qAll().then(function(q){
+  q.sort(function(a,b){return a.creado-b.creado;});
+  var p=Promise.resolve();
+  q.forEach(function(r){p=p.then(function(){r.enviado=Date.now();
+   return fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(r)}).then(function(x){return x.json();}).then(function(j){
+    if(!j.ok)throw new Error(j.error||'Error del servidor');
+    return qDel(r.id).then(function(){var h=lsGet('inf_hist_'+r.fecha)||[];h.forEach(function(e){if(e.id===r.id)e.enviado=true;});lsSet('inf_hist_'+r.fecha,h);});
+   });});});
+  return p;
+ }).catch(function(e){console.warn('Envío pendiente',e);}).then(function(){SYNC=false;actualizarPill();if($('sHome').classList.contains('on'))home();else if($('sDone').classList.contains('on'))qAll().then(function(q){if(!q.length)$('doneS').textContent=$('doneS').textContent.replace('Enviando al supervisor…','Enviada al supervisor ✅');});});
+}
+window.addEventListener('online',function(){sincronizar();cargarConfig();});
+window.addEventListener('offline',actualizarPill);
+setInterval(sincronizar,45000);
+
+/* ============ EVENTOS ============ */
+$('btnScan').onclick=abrirEscaner;$('doneScan').onclick=abrirEscaner;$('doneHome').onclick=home;
+$('scanCancel').onclick=function(){cerrarEscaner();home();};
+$('noQR').onclick=sinQR;$('noQRCancel').onclick=home;
+$('volverSede').onclick=pantallaIngreso;$('volverPersona').onclick=pantallaPersona;
+$('btnSalir').onclick=function(){if(DR&&!confirm('Tienes una revisión sin terminar. Si sales queda guardada para cuando vuelvas a entrar. ¿Salir?'))return;cerrarEscaner();USER=null;lsSet('inf_user',null);pantallaIngreso();};
+document.addEventListener('visibilitychange',function(){if(document.hidden){if(DR)kvSet('borrador',DR);}else{sincronizar();}});
+
+/* ============ ARRANQUE ============ */
+if('serviceWorker' in navigator&&location.protocol==='https:'){navigator.serviceWorker.register('sw.js').catch(function(){});}
+(function limpiarHist(){try{Object.keys(localStorage).forEach(function(k){if(k.indexOf('inf_hist_')===0&&k<'inf_hist_'+fecha(Date.now()-15*864e5))localStorage.removeItem(k);});}catch(e){}})();
+cargarConfig().then(function(){
+ USER=lsGet('inf_user');
+ if(CFG&&USER&&CFG.personal.some(function(p){return p.id===USER.id;}))entrar();else pantallaIngreso();
+ sincronizar();
+});
+</script>
+</body>
+</html>
