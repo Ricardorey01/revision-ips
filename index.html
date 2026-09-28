@@ -216,11 +216,12 @@ audio{width:100%;margin-top:8px}
 <script>
 /* ============ CONFIGURACIÓN ============ */
 var API_URL = 'https://script.google.com/macros/s/AKfycbxFgV0FXkL9Y-UHpl6gROY9uJf1sLz6_ip3UC7oiM4tkm3zh147L3jqvM_832apbrHhPA/exec';
-var VERSION = '1.0';
+var VERSION = '1.2';
 var PROB_VERIF = 0.25;        // probabilidad de verificación al azar por área
 var FOTO_MAX_MIN = 3;         // minutos máximos de antigüedad de una foto
 var QR_PREFIX = 'IPS-INF:';
 
+(function(){ try{var m=location.hash.match(/[#&]q=([A-Z0-9]+)/);if(m){localStorage.setItem('inf_pend',JSON.stringify({t:m[1],ts:Date.now()}));history.replaceState(null,'',location.pathname+location.search);}}catch(e){} })();
 (function(){ try{var q=new URLSearchParams(location.search).get('api');if(q){localStorage.setItem('inf_api',q);}var s=localStorage.getItem('inf_api');if(s)API_URL=s;}catch(e){} })();
 
 /* ============ UTILIDADES ============ */
@@ -306,9 +307,18 @@ function entrar(){
  SEDE=CFG.sedes.filter(function(s){return s.id===USER.sede;})[0];
  if(!SEDE){lsSet('inf_user',null);USER=null;pantallaIngreso();return;}
  $('topName').textContent=USER.nombre;$('topSub').textContent=SEDE.nombre;
- kvGet('borrador').then(function(d){if(d&&d.persona_id===USER.id&&fecha(d.ini)===hoy()){DR=d;abrirChecklist(true);}else{if(d)kvDel('borrador');home();}});
+ kvGet('borrador').then(function(d){if(d&&d.persona_id===USER.id&&fecha(d.ini)===hoy()){if(lsGet('inf_pend')){localStorage.removeItem('inf_pend');toast('Primero termina la revisión de '+d.area,true);}DR=d;abrirChecklist(true);}else{if(d)kvDel('borrador');home();}});
+}
+function pendiente(){
+ var p=lsGet('inf_pend');if(!p)return false;localStorage.removeItem('inf_pend');
+ if(Date.now()-p.ts>10*60000)return false;
+ var a=CFG.areas.filter(function(x){return x.token===p.t;})[0];
+ if(!a){toast('Ese código no está registrado. Avísale al supervisor.',true);return false;}
+ if(a.sede!==USER.sede){var so=CFG.sedes.filter(function(s){return s.id===a.sede;})[0];toast('Ese código es de la sede '+(so?so.nombre:a.sede),true);return false;}
+ vib([40,40,40]);iniciarRevision(a,'ok','');return true;
 }
 function home(){
+ if(pendiente())return;
  show('sHome');
  var areas=CFG.areas.filter(function(a){return a.sede===USER.sede;}),h=hist(),map={};
  h.forEach(function(x){map[x.area_id]=x;});
@@ -431,10 +441,10 @@ function evUI(i){
   h+='<button class="lnk" data-esc="'+i+'">✏️ Prefiero escribir</button><textarea class="'+(it._w?'':'hidden')+'" data-ta="'+i+'" placeholder="Escribe qué pasa">'+esc(it.texto)+'</textarea>';
  }
  ev.innerHTML=h;ev.classList.toggle('on',!!h);
- var fb=ev.querySelector('[data-foto]');if(fb)fb.onclick=function(){tomarFoto(function(u){DR.items[i].foto=u;guardarBorrador();evUI(i);},'Punto: '+it.c);};
+ var fb=ev.querySelector('[data-foto]');if(fb)fb.onclick=function(){kvSet('borrador',DR);tomarFoto(function(u){DR.items[i].foto=u;guardarBorrador();evUI(i);},'Punto: '+it.c);};
  var vb=ev.querySelector('[data-voz]');if(vb)vb.onclick=function(){grabar(i,vb);};
- var eb=ev.querySelector('[data-esc]');if(eb)eb.onclick=function(){it._w=true;var ta=ev.querySelector('textarea');ta.classList.remove('hidden');ta.focus();};
- var ta=ev.querySelector('textarea');if(ta)ta.oninput=function(){it.texto=ta.value;guardarBorrador();};
+ var eb=ev.querySelector('[data-esc]');if(eb)eb.onclick=function(){DR.items[i]._w=true;var ta=ev.querySelector('textarea');ta.classList.remove('hidden');ta.focus();};
+ var ta=ev.querySelector('textarea');if(ta)ta.oninput=function(){DR.items[i].texto=ta.value;guardarBorrador();};
  $('it'+i).classList.remove('miss');
 }
 
@@ -472,7 +482,7 @@ function fotoAreaUI(){
  if(DR.foto_area){im.src=DR.foto_area;im.classList.remove('hidden');}else im.classList.add('hidden');
  $('finalBox').classList.remove('missing');
 }
-$('btnFotoArea').onclick=function(){tomarFoto(function(u){DR.foto_area=u;guardarBorrador();fotoAreaUI();},'Foto general del área');};
+$('btnFotoArea').onclick=function(){kvSet('borrador',DR);tomarFoto(function(u){DR.foto_area=u;guardarBorrador();fotoAreaUI();},'Foto general del área');};
 
 /* ============ VOZ ============ */
 var REC=null,REC_I=null;
@@ -483,19 +493,31 @@ function grabar(i,btn){
 }
 function detener(){if(!REC)return;try{REC.stop();}catch(e){}}
 function dictado(i,btn,SR){
- var it=DR.items[i],r=new SR(),fin='',vivo='',err=null;
- r.lang='es-CO';r.continuous=true;r.interimResults=true;REC=r;REC_I=i;
- btn.className='act rec';btn.textContent='⏹️ Tocar para terminar (te estoy escuchando)';
- var tr=$('tr'+i);tr.textContent='…';
- r.onresult=function(e){vivo='';for(var k=e.resultIndex;k<e.results.length;k++){if(e.results[k].isFinal)fin+=e.results[k][0].transcript+' ';else vivo+=e.results[k][0].transcript;}tr.textContent=(fin+vivo).trim()||'…';};
- r.onerror=function(e){err=e.error;};
- r.onend=function(){REC=null;var t=(fin+vivo).trim();
-  if(t){it.texto=t.charAt(0).toUpperCase()+t.slice(1);it._audioMode=false;guardarBorrador();evUI(i);vib(30);return;}
+ // Una frase por sesión (continuous=false) y se reinicia sola: evita el texto duplicado de Chrome Android.
+ var partes=[],ultimo='',activo=true,err=null,r=null,t0=Date.now(),tr=$('tr'+i);
+ REC={stop:function(){activo=false;try{r&&r.stop();}catch(e){terminar();}}};REC_I=i;
+ btn.className='act rec';btn.textContent='⏹️ Tocar para terminar (te estoy escuchando)';tr.textContent='…';
+ function pintar(){tr.textContent=partes.concat(ultimo?[ultimo]:[]).join(' ').trim()||'…';}
+ function terminar(){
+  if(REC_I!==i&&REC===null)return;REC=null;REC_I=null;
+  var x=partes.join(' ').replace(/\s+/g,' ').trim(),it=DR&&DR.items[i];if(!it)return;
+  if(x){it.texto=x.charAt(0).toUpperCase()+x.slice(1);it._audioMode=false;guardarBorrador();kvSet('borrador',DR);evUI(i);vib(30);return;}
   it._audioMode=true;evUI(i);
   toast(err==='not-allowed'||err==='service-not-allowed'?'Da permiso al micrófono.':'No se entendió. Toca otra vez y graba un audio.',true);
- };
- setTimeout(function(){if(REC===r)detener();},60000);
- try{r.start();}catch(e){REC=null;it._audioMode=true;audioNota(i,btn);}
+ }
+ function arrancar(){
+  r=new SR();r.lang='es-CO';r.continuous=false;r.interimResults=true;r.maxAlternatives=1;ultimo='';err=null;
+  r.onresult=function(e){var res=e.results[e.results.length-1];ultimo=String(res[0].transcript||'').trim();pintar();};
+  r.onerror=function(e){err=e.error;};
+  r.onend=function(){
+   if(ultimo){partes.push(ultimo);ultimo='';}
+   var sigue=activo&&(!err||err==='no-speech'||err==='aborted')&&Date.now()-t0<90000;
+   if(sigue){try{arrancar();return;}catch(x){}}
+   terminar();
+  };
+  r.start();
+ }
+ try{arrancar();}catch(e){REC=null;DR.items[i]._audioMode=true;audioNota(i,btn);}
 }
 function audioNota(i,btn){
  if(!navigator.mediaDevices||!window.MediaRecorder){toast('Este celular no graba audio. Usa "Prefiero escribir".',true);return;}
@@ -505,9 +527,9 @@ function audioNota(i,btn){
   REC={stop:function(){if(m.state!=='inactive')m.stop();}};REC_I=i;
   btn.className='act rec';btn.textContent='⏹️ Tocar para terminar (grabando audio)';
   m.ondataavailable=function(e){if(e.data&&e.data.size)ch.push(e.data);};
-  m.onstop=function(){st.getTracks().forEach(function(t){t.stop();});REC=null;
+  m.onstop=function(){st.getTracks().forEach(function(t){t.stop();});REC=null;REC_I=null;
    var b=new Blob(ch,{type:m.mimeType||'audio/webm'});if(b.size<2000){toast('El audio quedó vacío. Intenta de nuevo.',true);evUI(i);return;}
-   var fr=new FileReader();fr.onload=function(){DR.items[i].audio=fr.result;guardarBorrador();evUI(i);vib(30);};fr.readAsDataURL(b);};
+   var fr=new FileReader();fr.onload=function(){if(!DR)return;DR.items[i].audio=fr.result;guardarBorrador();kvSet('borrador',DR);evUI(i);vib(30);};fr.readAsDataURL(b);};
   m.start(1000);setTimeout(function(){if(m.state!=='inactive')m.stop();},60000);
  }).catch(function(){toast('Da permiso al micrófono para grabar.',true);});
 }
@@ -517,7 +539,7 @@ function validar(){
  for(var i=0;i<DR.items.length;i++){var it=DR.items[i],m='';
   if(!it.e)m='Falta marcar este punto';
   else if((it.e==='mal'||it.verif)&&!it.foto)m='Falta la foto de este punto';
-  else if(it.e==='mal'&&!it.texto&&!it.audio)m='Falta contar qué pasa (toca 🎤)';
+  else if(it.e==='mal'&&(String(it.texto||'').trim().length<3)&&!it.audio)m='Falta contar qué pasa (toca 🎤)';
   if(m){var el=$('it'+i);el.classList.add('miss');el.scrollIntoView({behavior:'smooth',block:'center'});toast(m,true);vib([80,60,80]);return false;}}
  if(!DR.foto_area){$('finalBox').classList.add('missing');$('finalBox').scrollIntoView({behavior:'smooth',block:'center'});toast('Falta la foto general del área',true);vib([80,60,80]);return false;}
  return true;
@@ -538,7 +560,7 @@ $('btnGuardar').onclick=function(){
   area_id:DR.area_id,area:DR.area,tipologia:DR.tipologia,persona_id:DR.persona_id,persona:DR.persona,qr:DR.qr,motivo:DR.motivo,
   lat:DR.gps?DR.gps.lat:'',lng:DR.gps?DR.gps.lng:'',acc:DR.gps?DR.gps.acc:'',dist:dist,alertas:al,offline:!navigator.onLine,
   disp:(navigator.userAgent.match(/\(([^)]+)\)/)||['',''])[1].slice(0,80),foto_area:DR.foto_area,
-  items:DR.items.map(function(x){return {c:x.c,e:x.e,foto:x.foto,texto:x.texto,audio:x.audio,verif:x.verif};})};
+  items:DR.items.map(function(x){return {c:x.c,e:x.e,foto:x.foto,texto:String(x.texto||'').trim(),audio:x.audio,verif:x.verif};})};
  qPut(rec).then(function(){
   var h=hist();h.push({id:rec.id,area_id:DR.area_id,area:DR.area,piso:DR.piso,ini:DR.ini,fin:fin,malos:malos,enviado:false});setHist(h);
   clearInterval(TIMER);var a=DR.area;DR=null;return kvDel('borrador').then(function(){
@@ -566,6 +588,7 @@ function sincronizar(){
  }).catch(function(e){console.warn('Envío pendiente',e);}).then(function(){SYNC=false;actualizarPill();if($('sHome').classList.contains('on'))home();else if($('sDone').classList.contains('on'))qAll().then(function(q){if(!q.length)$('doneS').textContent=$('doneS').textContent.replace('Enviando al supervisor…','Enviada al supervisor ✅');});});
 }
 window.addEventListener('online',function(){sincronizar();cargarConfig();});
+window.addEventListener('hashchange',function(){var m=location.hash.match(/[#&]q=([A-Z0-9]+)/);if(!m)return;localStorage.setItem('inf_pend',JSON.stringify({t:m[1],ts:Date.now()}));history.replaceState(null,'',location.pathname+location.search);if(USER&&CFG&&!DR){cerrarEscaner();home();}});
 window.addEventListener('offline',actualizarPill);
 setInterval(sincronizar,45000);
 
