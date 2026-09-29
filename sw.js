@@ -1,5 +1,5 @@
 /* Guarda la app en el celular para que abra sin internet. Cambie la versión al publicar cambios. */
-var CACHE='inf-v2.3';
+var CACHE='inf-v2.4';
 var ARCHIVOS=['./','index.html','jsQR.min.js','manifest.json','icon-192.png','icon-512.png'];
 self.addEventListener('install',function(e){e.waitUntil(caches.open(CACHE).then(function(c){return c.addAll(ARCHIVOS);}));self.skipWaiting();});
 self.addEventListener('activate',function(e){e.waitUntil(caches.keys().then(function(k){return Promise.all(k.filter(function(x){return x!==CACHE;}).map(function(x){return caches.delete(x);}));}));self.clients.claim();});

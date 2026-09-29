@@ -133,6 +133,7 @@ audio{width:100%;margin-top:8px}
   <h1>¿En qué sede estás?</h1>
   <div class="list" id="sedeList"></div>
   <button class="big alt" id="btnSoyTec" style="margin-top:22px"><span class="e">🔧</span> Soy técnico o proveedor</button>
+  <p style="text-align:center;margin-top:14px"><button class="lnk" id="btnActCfg">↻ Actualizar sedes y áreas</button></p>
  </div>
  <div id="loginTec" class="hidden">
   <h1>¿Quién eres?</h1>
@@ -251,7 +252,7 @@ audio{width:100%;margin-top:8px}
 <script>
 /* ============ CONFIGURACIÓN ============ */
 var API_URL = 'https://script.google.com/macros/s/AKfycbxFgV0FXkL9Y-UHpl6gROY9uJf1sLz6_ip3UC7oiM4tkm3zh147L3jqvM_832apbrHhPA/exec';
-var VERSION = '2.3';
+var VERSION = '2.4';
 var PROB_VERIF = 0.25;        // probabilidad de verificación al azar por área
 var FOTO_MAX_MIN = 3;         // minutos máximos de antigüedad de una foto
 var QR_PREFIX = 'IPS-INF:';
@@ -298,12 +299,24 @@ function hist(){return lsGet('inf_hist_'+hoy())||[];}
 function setHist(h){lsSet('inf_hist_'+hoy(),h);}
 
 /* ============ CONFIG ============ */
-function cargarConfig(){
+function cargarConfig(espera){
  CFG=lsGet('inf_cfg');
  if(!navigator.onLine)return Promise.resolve(CFG);
- var ctl=new AbortController();setTimeout(function(){ctl.abort();},12000);
- return fetch(API_URL+'?accion=config',{signal:ctl.signal}).then(function(r){return r.json();}).then(function(j){if(j.ok&&j.config){CFG=j.config;lsSet('inf_cfg',CFG);}else throw new Error(j.error||'Respuesta inválida');return CFG;})
+ var ctl=new AbortController();setTimeout(function(){ctl.abort();},espera||30000);
+ return fetch(API_URL+'?accion=config&t='+Date.now(),{signal:ctl.signal,cache:'no-store'}).then(function(r){return r.json();}).then(function(j){if(j.ok&&j.config){CFG=j.config;lsSet('inf_cfg',CFG);}else throw new Error(j.error||'Respuesta inválida');return CFG;})
   .catch(function(e){$('noCfgErr').textContent=CFG?'':'Detalle: '+e.message;return CFG;});
+}
+/* Si la configuración cambió (sedes, áreas o personal nuevos), vuelve a pintar la pantalla actual */
+function refrescarConfig(aviso){
+ var antes=JSON.stringify([CFG&&CFG.sedes,CFG&&CFG.areas,CFG&&CFG.personal,CFG&&CFG.tipologias,CFG&&CFG.tecnicos]);
+ return cargarConfig().then(function(){
+  var ahora=JSON.stringify([CFG&&CFG.sedes,CFG&&CFG.areas,CFG&&CFG.personal,CFG&&CFG.tipologias,CFG&&CFG.tecnicos]);
+  if(ahora!==antes){
+   if($('sLogin').classList.contains('on')){if(!$('loginPin').classList.contains('hidden'))return;if(!$('loginPersona').classList.contains('hidden'))pantallaPersona();else if(!$('loginTec').classList.contains('hidden'))pantallaTec();else pantallaIngreso();}
+   else if($('sHome').classList.contains('on')&&USER){SEDE=CFG.sedes.filter(function(s){return s.id===USER.sede;})[0]||SEDE;home();}
+   if(aviso)toast('Sedes y áreas actualizadas');
+  }else if(aviso)toast(navigator.onLine?'Ya tienes la información más reciente':'Sin internet: se usa la última información guardada',!navigator.onLine);
+ });
 }
 
 /* ============ INGRESO ============ */
@@ -628,7 +641,7 @@ function sincronizar(){
   return p;
  }).catch(function(e){console.warn('Envío pendiente',e);}).then(function(){SYNC=false;actualizarPill();actualizarPillT();if($('sHome').classList.contains('on'))home();else if($('sDone').classList.contains('on'))qAll().then(function(q){if(!q.length)$('doneS').textContent=$('doneS').textContent.replace('Enviando al supervisor…','Enviada al supervisor ✅').replace('Enviando al supervisor para que la verifique…','Enviada al supervisor ✅');});});
 }
-window.addEventListener('online',function(){sincronizar();cargarConfig();});
+window.addEventListener('online',function(){sincronizar();refrescarConfig(false);});
 window.addEventListener('hashchange',function(){var m=location.hash.match(/[#&]q=([A-Z0-9]+)/);if(!m)return;localStorage.setItem('inf_pend',JSON.stringify({t:m[1],ts:Date.now()}));history.replaceState(null,'',location.pathname+location.search);if(USER&&CFG&&!DR){cerrarEscaner();home();}});
 window.addEventListener('offline',actualizarPill);
 setInterval(sincronizar,45000);
@@ -706,19 +719,23 @@ $('rGuardar').onclick=function(){
 $('btnScan').onclick=abrirEscaner;$('doneScan').onclick=abrirEscaner;$('doneHome').onclick=function(){if(TEC){$('doneScan').classList.remove('hidden');$('doneHome').textContent='Ver mi ronda';entrarTec();}else home();};
 $('scanCancel').onclick=function(){cerrarEscaner();home();};
 $('noQR').onclick=sinQR;$('noQRCancel').onclick=home;
-$('volverSede').onclick=pantallaIngreso;$('btnSoyTec').onclick=pantallaTec;$('volverSede2').onclick=pantallaIngreso;$('btnOrdAct').onclick=cargarOrdenes;$('volverPersona').onclick=function(){if(LP.tec)pantallaTec();else pantallaPersona();};
+$('volverSede').onclick=pantallaIngreso;$('btnSoyTec').onclick=pantallaTec;$('volverSede2').onclick=pantallaIngreso;$('btnOrdAct').onclick=cargarOrdenes;$('btnActCfg').onclick=function(){toast('Actualizando…');refrescarConfig(true);};$('volverPersona').onclick=function(){if(LP.tec)pantallaTec();else pantallaPersona();};
 $('btnSalir').onclick=function(){if(TEC){TEC=null;ORD=null;lsSet('inf_tec',null);pantallaIngreso();return;}if(DR&&!confirm('Tienes una revisión sin terminar. Si sales queda guardada para cuando vuelvas a entrar. ¿Salir?'))return;cerrarEscaner();USER=null;lsSet('inf_user',null);pantallaIngreso();};
 document.addEventListener('visibilitychange',function(){if(document.hidden){if(DR)kvSet('borrador',DR);}else{sincronizar();}});
 
 /* ============ ARRANQUE ============ */
 if('serviceWorker' in navigator&&location.protocol==='https:'){navigator.serviceWorker.register('sw.js').catch(function(){});}
 (function limpiarHist(){try{Object.keys(localStorage).forEach(function(k){if(k.indexOf('inf_hist_')===0&&k<'inf_hist_'+fecha(Date.now()-15*864e5))localStorage.removeItem(k);});}catch(e){}})();
-cargarConfig().then(function(){
+function arrancar(){
  USER=lsGet('inf_user');TEC=lsGet('inf_tec');
  if(CFG&&TEC&&(CFG.tecnicos||[]).some(function(p){return p.id===TEC.id&&p.pin===TEC.k;}))entrarTec();
  else if(CFG&&USER&&CFG.personal.some(function(p){return p.id===USER.id;}))entrar();else{TEC=null;pantallaIngreso();}
  sincronizar();
-});
+}
+CFG=lsGet('inf_cfg');
+if(CFG){arrancar();refrescarConfig(false);}      // abre al instante con lo guardado y actualiza por detrás
+else cargarConfig().then(arrancar);                // primera vez: espera la información
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&CFG)refrescarConfig(false);});
 </script>
 </body>
 </html>
