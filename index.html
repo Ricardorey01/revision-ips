@@ -252,7 +252,7 @@ audio{width:100%;margin-top:8px}
 <script>
 /* ============ CONFIGURACIÓN ============ */
 var API_URL = 'https://script.google.com/macros/s/AKfycbxFgV0FXkL9Y-UHpl6gROY9uJf1sLz6_ip3UC7oiM4tkm3zh147L3jqvM_832apbrHhPA/exec';
-var VERSION = '2.4';
+var VERSION = '2.5';
 var PROB_VERIF = 0.25;        // probabilidad de verificación al azar por área
 var FOTO_MAX_MIN = 3;         // minutos máximos de antigüedad de una foto
 var QR_PREFIX = 'IPS-INF:';
@@ -279,7 +279,7 @@ function distM(a,b,c,d){var R=6371000,r=Math.PI/180,x=(c-a)*r,y=(d-b)*r,h=Math.s
 function sha256(t){var b=new TextEncoder().encode(t);return crypto.subtle.digest('SHA-256',b).then(function(h){return Array.prototype.map.call(new Uint8Array(h),function(x){return ('0'+x.toString(16)).slice(-2);}).join('');});}
 function hablar(t){try{speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(t);u.lang='es-CO';u.rate=0.95;speechSynthesis.speak(u);}catch(e){toast('Este celular no puede leer en voz alta');}}
 
-var ICONOS=[[/cercado|energizador/,'⚡'],[/rampa/,'♿'],[/aviso|cartel/,'🪧'],[/cuadros|señalizaci/,'🖼️'],[/mesón|lavaplatos/,'🚰'],[/mesas|tándem/,'🪑'],[/escaleras met/,'🪜'],[/tanques de basura/,'🗑️'],[/tanques de almacenamiento|tanques de agua/,'💧'],[/impermeabiliz|láminas|eternit/,'🏠'],[/unidades de a\.a/,'❄️'],[/unidad(es)? odontol/,'🦷'],[/nevera|microondas/,'🧊'],[/lavamanos|sanitario|dispensador|llaves|bandeja/,'🚰'],[/baño completo/,'🚽'],[/luces|luz|ilumina/,'💡'],[/puerta|ventana|cerradura|sensores/,'🚪'],[/camilla/,'🛏️'],[/silla|sillería/,'🪑'],[/tomacorriente|cableado|canaleta/,'🔌'],[/caneca/,'🗑️'],[/escritorio|mueble|archivador|estanter|almacenamiento|mobiliario/,'🗄️'],[/biombo/,'🩺'],[/escalerilla|pasamanos/,'🪜'],[/mesa de mayo/,'🧰'],[/televisor|pantalla/,'📺'],[/botonera|ascensor/,'🛗'],[/emergencia|seccional/,'🚨'],[/orden y limpieza|limpieza|higiene/,'🧹'],[/fachada|pintura/,'🏢'],[/cerramiento|baranda/,'🚧'],[/media(s)? caña/,'📐'],[/pared|muro|techo|zócalo/,'🧱'],[/piso|baldos/,'🟫'],[/físicas generales/,'🔎']];
+var ICONOS=[[/^estado de techos/,'🏠'],[/zócalos/,'📏'],[/cercado|energizador/,'⚡'],[/rampa/,'♿'],[/aviso|cartel/,'🪧'],[/cuadros|señalizaci/,'🖼️'],[/mesón|lavaplatos/,'🚰'],[/mesas|tándem/,'🪑'],[/escaleras met/,'🪜'],[/tanques de basura/,'🗑️'],[/tanques de almacenamiento|tanques de agua/,'💧'],[/impermeabiliz|láminas|eternit/,'🏠'],[/unidades de a\.a/,'❄️'],[/unidad(es)? odontol/,'🦷'],[/nevera|microondas/,'🧊'],[/lavamanos|sanitario|dispensador|llaves|bandeja/,'🚰'],[/baño completo/,'🚽'],[/luces|luz|ilumina/,'💡'],[/puerta|ventana|cerradura|sensores/,'🚪'],[/camilla/,'🛏️'],[/silla|sillería/,'🪑'],[/tomacorriente|cableado|canaleta/,'🔌'],[/caneca/,'🗑️'],[/escritorio|mueble|archivador|estanter|almacenamiento|mobiliario/,'🗄️'],[/biombo/,'🩺'],[/escalerilla|pasamanos/,'🪜'],[/mesa de mayo/,'🧰'],[/televisor|pantalla/,'📺'],[/botonera|ascensor/,'🛗'],[/emergencia|seccional/,'🚨'],[/orden y limpieza|limpieza|higiene/,'🧹'],[/fachada|pintura/,'🏢'],[/cerramiento|baranda/,'🚧'],[/media(s)? caña/,'📐'],[/pared|muro|techo|zócalo/,'🧱'],[/piso|baldos/,'🟫'],[/físicas generales/,'🔎']];
 function icono(t){t=t.toLowerCase();for(var i=0;i<ICONOS.length;i++)if(ICONOS[i][0].test(t))return ICONOS[i][1];return '🔎';}
 
 /* ============ BASE DE DATOS LOCAL (IndexedDB) ============ */
